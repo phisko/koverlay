@@ -1,2 +1,1 @@
-# koverlay
-Simple and extensible overlay system using ImGui and the Kengine.
+![koverlay](https://github.com/phisko/koverlay/blob/master/screenshot.png)
