@@ -11,4 +11,4 @@ PARAMS = {'lamin': 48.724017, 'lomin': 2.356484, 'lamax': 48.775232, 'lomax': 2.
 # sending get request and saving the response as response object 
 r = requests.get(url = URL, params = PARAMS)
 
-closestPlane = str(r.json())
+closestPlane = r.json()
