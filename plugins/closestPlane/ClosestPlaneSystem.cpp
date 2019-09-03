@@ -12,7 +12,8 @@
 #include "to_string.hpp"
 #include "imgui.h"
 
-#include "python.hpp"
+#include "csv.hpp"
+#include "curl.hpp"
 
 EXPORT kengine::ISystem * getSystem(kengine::EntityManager & em) {
 	return new ClosestPlaneSystem(em);
@@ -188,31 +189,10 @@ ClosestPlaneSystem::~ClosestPlaneSystem() {
 	g_thread.join();
 }
 
-static std::string makeCurlCommand(const std::string & base, const std::unordered_map<std::string, std::string> & params = {}) {
-	std::string ret = base;
-
-	if (!params.empty())
-		ret += '?';
-
-	bool first = true;
-	for (const auto &[k, v] : params) {
-		if (!first)
-			ret += '&';
-		first = false;
-
-		ret += k;
-		ret += '=';
-		ret += v;
-	}
-
-	return "curl -s \"" + ret + '"';
-}
-
-
 static constexpr auto g_airportsFile = "closestPlane/airports.dat";
 
 static void downloadAirports() {
-	system((makeCurlCommand("https://raw.githubusercontent.com/jpatokal/openflights/master/data/airports.dat") + " > " + g_airportsFile).c_str());
+	putils::curl::downloadFile("https://raw.githubusercontent.com/jpatokal/openflights/master/data/airports.dat", g_airportsFile);
 	const auto lastWriteTime = std::filesystem::last_write_time(g_airportsFile);
 	const auto now = decltype(lastWriteTime)::clock().now();
 	assert(now - lastWriteTime < std::chrono::seconds(60));
@@ -230,49 +210,11 @@ static bool shouldDownloadAirports() {
 	return false;
 }
 
-std::vector<std::string> parseCSVLine(const std::string & s, char delim) {
-	static size_t lines = 0;
-
-	++lines;
-	std::vector<std::string> ret;
-
-	size_t startIndex = 0;
-	bool stop = false;
-	while (!stop) {
-		size_t nextStartIndex;
-
-		size_t endIndex;
-		if (s[startIndex] == '"') {
-			++startIndex; // Pop opening quote
-			const auto closingQuote = s.find_first_of('"', startIndex);
-			endIndex = s.find_first_of(delim, closingQuote);
-			if (endIndex == std::string::npos) {
-				endIndex = s.size() - 1;
-				stop = true;
-			}
-			nextStartIndex = endIndex + 1;
-			--endIndex; // Pop closing quote
-		}
-		else {
-			endIndex = s.find_first_of(delim, startIndex);
-			nextStartIndex = endIndex + 1;
-		}
-
-		ret.push_back(s.substr(startIndex, endIndex == std::string::npos ? endIndex : endIndex - startIndex));
-		if (endIndex == std::string::npos)
-			break;
-
-		startIndex = nextStartIndex;
-	}
-
-	return ret;
-}
-
 static void parseAirports() {
 	std::ifstream f(g_airportsFile);
 	assert(f);
 	for (std::string line; std::getline(f, line);) {
-		const auto fields = parseCSVLine(line, ',');
+		const auto fields = putils::parseCSVLine(line, ',');
 		AirportInfo airport;
 		airport.airportName = fields[1];
 		airport.city = fields[2];
@@ -291,26 +233,12 @@ static void parseAirlines() {
 	assert(f);
 	for (std::string line; std::getline(f, line);) {
 		++count;
-		const auto fields = parseCSVLine(line, '|');
+		const auto fields = putils::parseCSVLine(line, '|');
 		const auto & iataCode = fields[0];
 		const auto & name = fields[2];
 		g_airlines[iataCode] = name;
 	}
 }
-
-static std::string runProcess(const std::string & process) {
-	std::string s;
-
-	const auto pipe = _popen(process.c_str(), "r");
-	assert(pipe != nullptr);
-	char buffer[1024];
-	while (fgets(buffer, sizeof(buffer), pipe))
-		s += buffer;
-	_pclose(pipe);
-
-	return s;
-}
-
 
 void ClosestPlaneSystem::execute() {
 	static bool first = true;
@@ -326,12 +254,12 @@ void ClosestPlaneSystem::execute() {
 			parseAirlines();
 
 			while (_em.running) {
-				const auto s = runProcess(makeCurlCommand("https://opensky-network.org/api/states/all", {
+				const auto s = putils::curl::httpRequest("https://opensky-network.org/api/states/all", {
 					{ "lamin", putils::toString(g_coordinates.latitudeA) },
 					{ "lomin", putils::toString(g_coordinates.longitudeA) },
 					{ "lamax", putils::toString(g_coordinates.latitudeB) },
 					{ "lomax", putils::toString(g_coordinates.longitudeB) }
-				}));
+				});
 
 				if (!_em.running)
 					break;
@@ -349,9 +277,9 @@ void ClosestPlaneSystem::execute() {
 					plane.country = state[2].get<std::string>();
 
 					const auto t = ::time(nullptr);
-					const auto s = runProcess(makeCurlCommand("https://opensky-network.org/api/routes", {
+					const auto s = putils::curl::httpRequest("https://opensky-network.org/api/routes", {
 						{ "callsign", plane.callSign }
-					}));
+					});
 					if (!_em.running)
 						break;
 
