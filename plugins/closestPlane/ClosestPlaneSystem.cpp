@@ -21,9 +21,13 @@ EXPORT kengine::ISystem * getSystem(kengine::EntityManager & em) {
 struct PlaneInfo {
 	std::string callSign;
 	std::string country;
-	std::string departureTime;
+
+	std::string company;
+	std::string flightNumber;
+
 	std::string origin;
 	std::string destination;
+
 	putils::json json;
 };
 
@@ -91,9 +95,19 @@ ClosestPlaneSystem::ClosestPlaneSystem(kengine::EntityManager & em) : System(em)
 							ImGui::Separator();
 						first = false;
 
+						static const auto columns = [](const std::string & l, const std::string & r) {
+							ImGui::Text(l.c_str());
+							ImGui::NextColumn();
+							ImGui::Text(r.c_str());
+							ImGui::NextColumn();
+						};
+
 						ImGui::Columns(2);
-						ImGui::Text("Callsign"); ImGui::NextColumn(); ImGui::Text(plane.callSign.c_str()); ImGui::NextColumn();
-						ImGui::Text("Country"); ImGui::NextColumn(); ImGui::Text(plane.country.c_str()); ImGui::NextColumn();
+						ImGui::SetColumnWidth(0, 100.f);
+
+						columns("Callsign", plane.callSign);
+						columns("Country", plane.country);
+						columns("Flight", plane.company + plane.flightNumber);
 
 						static const auto displayAirport = [&](const std::string & childName, const AirportInfo & airport) {
 							ImGui::BeginChild(childName.c_str(), { 0, 80 }, true);
@@ -107,12 +121,16 @@ ClosestPlaneSystem::ClosestPlaneSystem(kengine::EntityManager & em) : System(em)
 							ImGui::EndChild();
 						};
 
-						ImGui::Columns();
-
 						ImGui::Text("Origin");
+						ImGui::NextColumn();
 						displayAirport("Origin##" + plane.callSign, g_airports[plane.origin]);
+						ImGui::NextColumn();
 						ImGui::Text("Destination");
+						ImGui::NextColumn();
 						displayAirport("Destination##" + plane.callSign, g_airports[plane.destination]);
+						ImGui::NextColumn();
+
+						ImGui::Columns();
 
 						displayJSON("json", plane.json);
 					}
@@ -271,10 +289,8 @@ void ClosestPlaneSystem::execute() {
 					plane.country = state[2].get<std::string>();
 
 					const auto t = ::time(nullptr);
-					const auto s = runProcess(makeCurlCommand("https://opensky-network.org/api/flights/aircraft", {
-						{ "icao24", state[0].get<std::string>() },
-						{ "begin", putils::toString(t - 86400) },
-						{ "end", putils::toString(t) }
+					const auto s = runProcess(makeCurlCommand("https://opensky-network.org/api/routes", {
+						{ "callsign", plane.callSign }
 					}));
 					if (!_em.running)
 						break;
@@ -285,14 +301,11 @@ void ClosestPlaneSystem::execute() {
 					const auto json = putils::json::parse(s);
 					plane.json = json;
 
-					for (const auto & flight : json) {
-						const auto & origin = flight["estDepartureAirport"];
-						if (origin.is_string())
-							plane.origin = origin.get<std::string>();
-						const auto & dest = flight["estArrivalAirport"];
-						if (dest.is_string())
-							plane.destination = dest.get<std::string>();
-					}
+					plane.company = json["operatorIata"].get<std::string>();
+					plane.flightNumber = putils::toString(json["flightNumber"].get<int>());
+
+					plane.origin = json["route"][0].get<std::string>();
+					plane.destination = json["route"][1].get<std::string>();
 
 					planes.push_back(std::move(plane));
 
