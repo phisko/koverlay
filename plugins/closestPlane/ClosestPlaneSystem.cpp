@@ -24,12 +24,52 @@ struct PlaneInfo {
 	std::string departureTime;
 	std::string origin;
 	std::string destination;
+	putils::json json;
+};
+
+struct AirportInfo {
+	std::string airportName;
+	std::string city;
+	std::string country;
+	std::string code;
 };
 
 static std::thread g_thread;
 
+static std::string g_lastResponse;
 static std::vector<PlaneInfo> g_planes;
+static std::unordered_map<std::string, AirportInfo> g_airports;
 std::mutex g_planesMutex;
+
+static void displayJSON(const char * name, const putils::json & json) {
+	if (json.is_string())
+		ImGui::Text("%s: %s", name, json.get<std::string>().c_str());
+	else if (json.is_null())
+		ImGui::Text("%s: null", name);
+	else if (json.is_boolean())
+		ImGui::Text("%s: %s", name, json.get<bool>() ? "true" : "false");
+	else if (json.is_number_float())
+		ImGui::Text("%s: %f", name, json.get<float>());
+	else if (json.is_number_integer())
+		ImGui::Text("%s: %d", name, json.get<int>());
+	else if (json.is_number_unsigned())
+		ImGui::Text("%s: %zu", name, json.get<unsigned int>());
+	else if (json.is_object()) {
+		if (ImGui::TreeNode(name)) {
+			for (const auto & obj : json.items())
+				displayJSON(obj.key().c_str(), obj.value());
+			ImGui::TreePop();
+		}
+	}
+	else if (json.is_array()) {
+		if (ImGui::TreeNode(name)) {
+			size_t i = 0;
+			for (const auto & obj : json)
+				displayJSON(putils::toString(i++).c_str(), obj);
+			ImGui::TreePop();
+		}
+	}
+}
 
 ClosestPlaneSystem::ClosestPlaneSystem(kengine::EntityManager & em) : System(em), _em(em) {
 	static bool display = false;
@@ -42,28 +82,143 @@ ClosestPlaneSystem::ClosestPlaneSystem(kengine::EntityManager & em) : System(em)
 
 				if (ImGui::Begin("Closest plane")) {
 					std::unique_lock<std::mutex> l(g_planesMutex);
+					bool first = true;
+					if (g_planes.empty())
+						ImGui::Text(g_lastResponse.c_str());
+
 					for (const auto & plane : g_planes) {
-						if (ImGui::CollapsingHeader(plane.callSign.c_str())) {
+						if (!first)
+							ImGui::Separator();
+						first = false;
+
+						ImGui::Columns(2);
+						ImGui::Text("Callsign"); ImGui::NextColumn(); ImGui::Text(plane.callSign.c_str()); ImGui::NextColumn();
+						ImGui::Text("Country"); ImGui::NextColumn(); ImGui::Text(plane.country.c_str()); ImGui::NextColumn();
+
+						static const auto displayAirport = [&](const std::string & childName, const AirportInfo & airport) {
+							ImGui::BeginChild(childName.c_str(), { 0, 80 }, true);
 							ImGui::Columns(2);
-							ImGui::Text("Country"); ImGui::NextColumn(); ImGui::Text(plane.country.c_str()); ImGui::NextColumn();
-							ImGui::Text("Origin"); ImGui::NextColumn(); ImGui::Text(plane.origin.c_str()); ImGui::NextColumn();
-							ImGui::Text("Destination"); ImGui::NextColumn(); ImGui::Text(plane.destination.c_str()); ImGui::NextColumn();
+							ImGui::SetColumnWidth(0, 75.f);
+							ImGui::Text("Name"); ImGui::NextColumn(); ImGui::Text(airport.airportName.c_str()); ImGui::NextColumn();
+							ImGui::Text("City"); ImGui::NextColumn(); ImGui::Text(airport.city.c_str()); ImGui::NextColumn();
+							ImGui::Text("Country"); ImGui::NextColumn(); ImGui::Text(airport.country.c_str()); ImGui::NextColumn();
+							ImGui::Text("Code"); ImGui::NextColumn(); ImGui::Text(airport.code.c_str()); ImGui::NextColumn();
 							ImGui::Columns();
-						}
+							ImGui::EndChild();
+						};
+
+						ImGui::Columns();
+
+						ImGui::Text("Origin");
+						displayAirport("Origin##" + plane.callSign, g_airports[plane.origin]);
+						ImGui::Text("Destination");
+						displayAirport("Destination##" + plane.callSign, g_airports[plane.destination]);
+
+						displayJSON("json", plane.json);
 					}
-					// for (const auto & state : g_json) {
-					// 	const auto callSign = state[1].dump();
-					// 	if (ImGui::CollapsingHeader(callSign.c_str())) {
-					// 		ImGui::Columns(2);
-					// 		ImGui::Text("Origin country"); ImGui::NextColumn(); ImGui::Text(state[2].dump().c_str());
-					// 		ImGui::Text("Origin country"); ImGui::NextColumn(); ImGui::Text(state[2].dump().c_str());
-					// 		ImGui::Columns();
-					// 	}
-					// }
 				}
 				ImGui::End();
 		});
 	};
+}
+
+ClosestPlaneSystem::~ClosestPlaneSystem() {
+	g_thread.join();
+}
+
+static std::string makeCurlCommand(const std::string & base, const std::unordered_map<std::string, std::string> & params = {}) {
+	std::string ret = base;
+
+	if (!params.empty())
+		ret += '?';
+
+	bool first = true;
+	for (const auto &[k, v] : params) {
+		if (!first)
+			ret += '&';
+		first = false;
+
+		ret += k;
+		ret += '=';
+		ret += v;
+	}
+
+	return "curl -s \"" + ret + '"';
+}
+
+
+static constexpr auto g_airportsFile = "closestPlane/airports.dat";
+
+static void downloadAirports() {
+	system((makeCurlCommand("https://raw.githubusercontent.com/jpatokal/openflights/master/data/airports.dat") + " > " + g_airportsFile).c_str());
+	const auto lastWriteTime = std::filesystem::last_write_time(g_airportsFile);
+	const auto now = decltype(lastWriteTime)::clock().now();
+	assert(now - lastWriteTime < std::chrono::seconds(60));
+}
+
+static bool shouldDownloadAirports() {
+	if (!std::filesystem::exists(g_airportsFile))
+		return true;
+
+	const auto lastWriteTime = std::filesystem::last_write_time(g_airportsFile);
+	const auto now = decltype(lastWriteTime)::clock().now();
+	if (now - lastWriteTime > std::chrono::hours(24))
+		return true;
+
+	return false;
+}
+
+std::vector<std::string> parseCSVLine(const std::string & s, char delim) {
+	static size_t lines = 0;
+
+	++lines;
+	std::vector<std::string> ret;
+
+	size_t startIndex = 0;
+	bool stop = false;
+	while (!stop) {
+		size_t nextStartIndex;
+
+		size_t endIndex;
+		if (s[startIndex] == '"') {
+			++startIndex; // Pop opening quote
+			const auto closingQuote = s.find_first_of('"', startIndex);
+			endIndex = s.find_first_of(delim, closingQuote);
+			if (endIndex == std::string::npos) {
+				endIndex = s.size() - 1;
+				stop = true;
+			}
+			nextStartIndex = endIndex + 1;
+			--endIndex; // Pop closing quote
+		}
+		else {
+			endIndex = s.find_first_of(delim, startIndex);
+			nextStartIndex = endIndex + 1;
+		}
+
+		ret.push_back(s.substr(startIndex, endIndex == std::string::npos ? endIndex : endIndex - startIndex));
+		if (endIndex == std::string::npos)
+			break;
+
+		startIndex = nextStartIndex;
+	}
+
+	return ret;
+}
+
+static void parseAirports() {
+	std::ifstream f(g_airportsFile);
+	for (std::string line; std::getline(f, line);) {
+		const auto fields = parseCSVLine(line, ',');
+		AirportInfo airport;
+		airport.airportName = fields[1];
+		airport.city = fields[2];
+		airport.country = fields[3];
+		airport.code = fields[4];
+
+		const auto & icao = fields[5];
+		g_airports[icao] = std::move(airport);
+	}
 }
 
 static std::string runProcess(const std::string & process) {
@@ -79,6 +234,7 @@ static std::string runProcess(const std::string & process) {
 	return s;
 }
 
+
 void ClosestPlaneSystem::execute() {
 	static bool first = true;
 	if (!first)
@@ -87,34 +243,62 @@ void ClosestPlaneSystem::execute() {
 
 	g_thread = std::thread([&] {
 		try {
+			if (shouldDownloadAirports())
+				downloadAirports();
+			parseAirports();
+
 			while (_em.running) {
-				// py::eval_file("closestPlane/get_info.py");
-				// g_json = putils::json(py::str(py::globals()["closestPlane"]));
+				const auto s = runProcess(makeCurlCommand("https://opensky-network.org/api/states/all", {
+					{ "lamin", "48.749256" },
+					{ "lomin", "2.401905" },
+					{ "lamax", "48.775333" },
+					{ "lomax", "2.525670" }
+				}));
 
-				const auto s = runProcess("curl -s \"https://opensky-network.org/api/states/all?lamin=48.724017&lomin=2.356484&lamax=48.775232&lomax=2.539622\"");
+				if (!_em.running)
+					break;
+
+				g_lastResponse = s;
+				if (!putils::json::accept(s))
+					continue;
+
 				const auto json = putils::json::parse(s);
-
 				std::vector<PlaneInfo> planes;
 
 				for (const auto & state : json["states"]) {
 					PlaneInfo plane;
-					plane.callSign = state[1].dump();
-					plane.country = state[2].dump();
+					plane.callSign = state[1].get<std::string>();
+					plane.country = state[2].get<std::string>();
 
 					const auto t = ::time(nullptr);
-					const auto s = runProcess("curl -s \"https://opensky-network.org/api/flights/aircraft?icao24=" + state[0].dump() + "&begin=" + putils::toString(t - 86400) + "&end=" + putils::toString(t) + "\"");
+					const auto s = runProcess(makeCurlCommand("https://opensky-network.org/api/flights/aircraft", {
+						{ "icao24", state[0].get<std::string>() },
+						{ "begin", putils::toString(t - 86400) },
+						{ "end", putils::toString(t) }
+					}));
+					if (!_em.running)
+						break;
+
+					if (!putils::json::accept(s))
+						continue;
+
 					const auto json = putils::json::parse(s);
+					plane.json = json;
 
 					for (const auto & flight : json) {
-						plane.origin = flight["estDepartureAirport"].dump();
-						plane.destination = flight["estArrivalAirport"].dump();
+						const auto & origin = flight["estDepartureAirport"];
+						if (origin.is_string())
+							plane.origin = origin.get<std::string>();
+						const auto & dest = flight["estArrivalAirport"];
+						if (dest.is_string())
+							plane.destination = dest.get<std::string>();
 					}
 
 					planes.push_back(std::move(plane));
-				}
 
-				std::unique_lock<std::mutex> l(g_planesMutex);
-				g_planes = planes;
+					std::unique_lock<std::mutex> l(g_planesMutex);
+					g_planes = planes;
+				}
 			}
 		}
 		catch (const std::exception & e) {
