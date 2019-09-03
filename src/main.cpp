@@ -18,6 +18,8 @@ static void addMenus(kengine::EntityManager & em) {
 }
 
 int main(int, char **av) {
+	ShowWindow(GetConsoleWindow(), SW_HIDE);
+
 	putils::goToBinDir(av[0]);
 
 	kengine::EntityManager em(std::thread::hardware_concurrency());
