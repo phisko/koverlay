@@ -9,4 +9,4 @@ add_library(${name}
         )
 target_link_libraries(${name} kengine api)
 target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_LIST_DIR})
-configure_file(get_info.py ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}/closestPlane/get_info.py COPYONLY)
+configure_file(airlines.dat ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}/closestPlane/airlines.dat COPYONLY)

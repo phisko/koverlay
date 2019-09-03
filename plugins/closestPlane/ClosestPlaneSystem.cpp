@@ -40,9 +40,19 @@ struct AirportInfo {
 
 static std::thread g_thread;
 
+struct Coordinates {
+	float latitudeA = 48.801490;
+	float latitudeB = 48.701494;
+	float longitudeA = 2.338643;
+	float longitudeB = 2.713339;
+};
+static Coordinates g_coordinates;
+static std::string g_filterAirport;
+
 static std::string g_lastResponse;
 static std::vector<PlaneInfo> g_planes;
 static std::unordered_map<std::string, AirportInfo> g_airports;
+static std::unordered_map<std::string, std::string> g_airlines;
 std::mutex g_planesMutex;
 
 static void displayJSON(const char * name, const putils::json & json) {
@@ -85,6 +95,35 @@ ClosestPlaneSystem::ClosestPlaneSystem(kengine::EntityManager & em) : System(em)
 					return;
 
 				if (ImGui::Begin("Closest plane")) {
+					const auto inputFloat = [](const char * label, float & f) {
+						float tmp = f;
+						if (ImGui::InputFloat(label, &tmp, 0.f, 0.f, "%.6f"))
+							f = tmp;
+					};
+
+					char buff[1024] = "";
+					if (ImGui::InputText("Airport", buff, sizeof(buff)))
+						g_filterAirport = buff;
+
+					ImGui::Text("Latitudes");
+					ImGui::Columns(2);
+					inputFloat("##latitudeA", g_coordinates.latitudeA);
+					ImGui::NextColumn();
+					inputFloat("##latitudeB", g_coordinates.latitudeB);
+					ImGui::Columns();
+
+					ImGui::Text("Longitudes");
+					ImGui::Columns(2);
+					inputFloat("##longitudeA", g_coordinates.longitudeA);
+					ImGui::NextColumn();
+					inputFloat("##longitudeB", g_coordinates.longitudeB);
+					ImGui::Columns();
+
+					if (g_coordinates.latitudeA > g_coordinates.latitudeB)
+						std::swap(g_coordinates.latitudeA, g_coordinates.latitudeB);
+					if (g_coordinates.longitudeA > g_coordinates.longitudeB)
+						std::swap(g_coordinates.longitudeA, g_coordinates.longitudeB);
+
 					std::unique_lock<std::mutex> l(g_planesMutex);
 					bool first = true;
 					if (g_planes.empty())
@@ -107,16 +146,17 @@ ClosestPlaneSystem::ClosestPlaneSystem(kengine::EntityManager & em) : System(em)
 
 						columns("Callsign", plane.callSign);
 						columns("Country", plane.country);
+						columns("Airline", g_airlines[plane.company]);
 						columns("Flight", plane.company + plane.flightNumber);
 
 						static const auto displayAirport = [&](const std::string & childName, const AirportInfo & airport) {
 							ImGui::BeginChild(childName.c_str(), { 0, 80 }, true);
 							ImGui::Columns(2);
 							ImGui::SetColumnWidth(0, 75.f);
-							ImGui::Text("Name"); ImGui::NextColumn(); ImGui::Text(airport.airportName.c_str()); ImGui::NextColumn();
-							ImGui::Text("City"); ImGui::NextColumn(); ImGui::Text(airport.city.c_str()); ImGui::NextColumn();
-							ImGui::Text("Country"); ImGui::NextColumn(); ImGui::Text(airport.country.c_str()); ImGui::NextColumn();
-							ImGui::Text("Code"); ImGui::NextColumn(); ImGui::Text(airport.code.c_str()); ImGui::NextColumn();
+							columns("Name", airport.airportName);
+							columns("City", airport.city);
+							columns("Country", airport.country);
+							columns("Code", airport.code);
 							ImGui::Columns();
 							ImGui::EndChild();
 						};
@@ -132,7 +172,7 @@ ClosestPlaneSystem::ClosestPlaneSystem(kengine::EntityManager & em) : System(em)
 
 						ImGui::Columns();
 
-						displayJSON("json", plane.json);
+						// displayJSON("json", plane.json);
 					}
 				}
 				ImGui::End();
@@ -226,6 +266,7 @@ std::vector<std::string> parseCSVLine(const std::string & s, char delim) {
 
 static void parseAirports() {
 	std::ifstream f(g_airportsFile);
+	assert(f);
 	for (std::string line; std::getline(f, line);) {
 		const auto fields = parseCSVLine(line, ',');
 		AirportInfo airport;
@@ -236,6 +277,20 @@ static void parseAirports() {
 
 		const auto & icao = fields[5];
 		g_airports[icao] = std::move(airport);
+	}
+}
+
+static void parseAirlines() {
+	size_t count = 0;
+
+	std::ifstream f("closestPlane/airlines.dat");
+	assert(f);
+	for (std::string line; std::getline(f, line);) {
+		++count;
+		const auto fields = parseCSVLine(line, '|');
+		const auto & iataCode = fields[0];
+		const auto & name = fields[2];
+		g_airlines[iataCode] = name;
 	}
 }
 
@@ -264,13 +319,14 @@ void ClosestPlaneSystem::execute() {
 			if (shouldDownloadAirports())
 				downloadAirports();
 			parseAirports();
+			parseAirlines();
 
 			while (_em.running) {
 				const auto s = runProcess(makeCurlCommand("https://opensky-network.org/api/states/all", {
-					{ "lamin", "48.749256" },
-					{ "lomin", "2.401905" },
-					{ "lamax", "48.775333" },
-					{ "lomax", "2.525670" }
+					{ "lamin", putils::toString(g_coordinates.latitudeA) },
+					{ "lomin", putils::toString(g_coordinates.longitudeA) },
+					{ "lamax", putils::toString(g_coordinates.latitudeB) },
+					{ "lomax", putils::toString(g_coordinates.longitudeB) }
 				}));
 
 				if (!_em.running)
@@ -306,6 +362,11 @@ void ClosestPlaneSystem::execute() {
 
 					plane.origin = json["route"][0].get<std::string>();
 					plane.destination = json["route"][1].get<std::string>();
+
+					const auto & origin = g_airports[plane.origin].airportName;
+					const auto & destination = g_airports[plane.destination].airportName;
+					if (!g_filterAirport.empty() && origin.find(g_filterAirport) == std::string::npos && destination.find(g_filterAirport) == std::string::npos)
+						continue;
 
 					planes.push_back(std::move(plane));
 

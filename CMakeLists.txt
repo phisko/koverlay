@@ -56,3 +56,5 @@ target_include_directories(${exe_name} PRIVATE src)
 target_link_libraries(${exe_name} kengine api)
 
 add_subdirectory(plugins)
+
+configure_file(resources/koala.ico ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}/resources/koala.ico COPYONLY)
