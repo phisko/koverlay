@@ -130,9 +130,13 @@ ClosestPlaneSystem::ClosestPlaneSystem(kengine::EntityManager & em) : System(em)
 						ImGui::Text(g_lastResponse.c_str());
 
 					for (const auto & plane : g_planes) {
-						if (!first)
-							ImGui::Separator();
-						first = false;
+						const auto & origin = g_airports[plane.origin].airportName;
+						const auto & destination = g_airports[plane.destination].airportName;
+						if (!g_filterAirport.empty() && origin.find(g_filterAirport) == std::string::npos && destination.find(g_filterAirport) == std::string::npos)
+							continue;
+
+						ImGui::Separator();
+						ImGui::Separator();
 
 						static const auto columns = [](const std::string & l, const std::string & r) {
 							ImGui::Text(l.c_str());
@@ -362,11 +366,6 @@ void ClosestPlaneSystem::execute() {
 
 					plane.origin = json["route"][0].get<std::string>();
 					plane.destination = json["route"][1].get<std::string>();
-
-					const auto & origin = g_airports[plane.origin].airportName;
-					const auto & destination = g_airports[plane.destination].airportName;
-					if (!g_filterAirport.empty() && origin.find(g_filterAirport) == std::string::npos && destination.find(g_filterAirport) == std::string::npos)
-						continue;
 
 					planes.push_back(std::move(plane));
 
