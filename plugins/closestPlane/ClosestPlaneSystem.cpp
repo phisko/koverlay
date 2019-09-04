@@ -42,10 +42,10 @@ struct AirportInfo {
 static std::thread g_thread;
 
 struct Coordinates {
-	float latitudeA = 48.801490;
-	float latitudeB = 48.701494;
-	float longitudeA = 2.338643;
-	float longitudeB = 2.713339;
+	float latitudeA = 48.801490f;
+	float latitudeB = 48.701494f;
+	float longitudeA = 2.338643f;
+	float longitudeB = 2.713339f;
 };
 static Coordinates g_coordinates;
 static std::string g_filterAirport;
