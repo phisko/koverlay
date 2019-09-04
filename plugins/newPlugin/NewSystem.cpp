@@ -11,6 +11,11 @@ EXPORT kengine::ISystem * getSystem(kengine::EntityManager & em) {
 	return new NewSystem(em);
 }
 
+static float * g_scale = nullptr;
+static float getScale() {
+	return g_scale != nullptr ? *g_scale : 1.f;
+}
+
 NewSystem::NewSystem(kengine::EntityManager & em) : System(em), _em(em) {
 	static bool display = false;
 	send(kengine::packets::AddImGuiTool{ "NewSystem", display });
@@ -25,4 +30,8 @@ NewSystem::NewSystem(kengine::EntityManager & em) : System(em), _em(em) {
 				ImGui::End();
 		});
 	};
+}
+
+void NewSystem::handle(const kengine::packets::ImGuiScale & p) const {
+	g_scale = &p.scale;
 }

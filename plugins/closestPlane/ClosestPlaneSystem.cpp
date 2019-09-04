@@ -15,6 +15,11 @@
 #include "csv.hpp"
 #include "curl.hpp"
 
+static float * g_scale = nullptr;
+static float getScale() {
+	return g_scale != nullptr ? *g_scale : 1.f;
+}
+
 EXPORT kengine::ISystem * getSystem(kengine::EntityManager & em) {
 	return new ClosestPlaneSystem(em);
 }
@@ -39,8 +44,6 @@ struct AirportInfo {
 	std::string code;
 };
 
-static std::thread g_thread;
-
 struct Coordinates {
 	float latitudeA = 48.801490f;
 	float latitudeB = 48.701494f;
@@ -50,11 +53,16 @@ struct Coordinates {
 static Coordinates g_coordinates;
 static std::string g_filterAirport;
 
-static std::string g_lastResponse;
-static std::vector<PlaneInfo> g_planes;
 static std::unordered_map<std::string, AirportInfo> g_airports;
 static std::unordered_map<std::string, std::string> g_airlines;
-std::mutex g_planesMutex;
+
+static std::thread g_thread;
+static std::string g_lastResponse;
+static std::vector<PlaneInfo> g_planes;
+static std::vector<PlaneInfo> g_pendingPlanes;
+static std::mutex g_planesMutex;
+static float g_planesUpdateTimer = 0.f;
+static float g_planesUpdateFrequency = 5.f;
 
 static void displayJSON(const char * name, const putils::json & json) {
 	if (json.is_string())
@@ -86,6 +94,27 @@ static void displayJSON(const char * name, const putils::json & json) {
 	}
 }
 
+static void getPendingPlaneList(float deltaTime) {
+	std::unique_lock<std::mutex> l(g_planesMutex);
+	bool first = true;
+	if (g_planes.empty()) {
+		if (!g_pendingPlanes.empty()) {
+			g_planes = g_pendingPlanes;
+			g_pendingPlanes.clear();
+			g_planesUpdateTimer = g_planesUpdateFrequency;
+		}
+		else
+			ImGui::Text(g_lastResponse.c_str());
+	}
+
+	g_planesUpdateTimer -= deltaTime;
+	if (g_planesUpdateTimer < 0.f && !g_pendingPlanes.empty()) {
+		g_planes = g_pendingPlanes;
+		g_pendingPlanes.clear();
+		g_planesUpdateTimer = g_planesUpdateFrequency;
+	}
+}
+
 ClosestPlaneSystem::ClosestPlaneSystem(kengine::EntityManager & em) : System(em), _em(em) {
 	static bool display = false;
 	send(kengine::packets::AddImGuiTool{ "Closest plane", display });
@@ -105,6 +134,7 @@ ClosestPlaneSystem::ClosestPlaneSystem(kengine::EntityManager & em) : System(em)
 					char buff[1024] = "";
 					if (ImGui::InputText("Airport", buff, sizeof(buff)))
 						g_filterAirport = buff;
+					ImGui::InputFloat("Update frequency", &g_planesUpdateFrequency);
 
 					ImGui::Text("Latitudes");
 					ImGui::Columns(2);
@@ -125,10 +155,7 @@ ClosestPlaneSystem::ClosestPlaneSystem(kengine::EntityManager & em) : System(em)
 					if (g_coordinates.longitudeA > g_coordinates.longitudeB)
 						std::swap(g_coordinates.longitudeA, g_coordinates.longitudeB);
 
-					std::unique_lock<std::mutex> l(g_planesMutex);
-					bool first = true;
-					if (g_planes.empty())
-						ImGui::Text(g_lastResponse.c_str());
+					getPendingPlaneList(time.getDeltaTime().count());
 
 					for (const auto & plane : g_planes) {
 						const auto & origin = g_airports[plane.origin].airportName;
@@ -147,7 +174,7 @@ ClosestPlaneSystem::ClosestPlaneSystem(kengine::EntityManager & em) : System(em)
 						};
 
 						ImGui::Columns(2);
-						ImGui::SetColumnWidth(0, 100.f);
+						ImGui::SetColumnWidth(0, 100.f * getScale());
 
 						columns("Callsign", plane.callSign);
 						columns("Country", plane.country);
@@ -155,9 +182,9 @@ ClosestPlaneSystem::ClosestPlaneSystem(kengine::EntityManager & em) : System(em)
 						columns("Flight", plane.company + plane.flightNumber);
 
 						static const auto displayAirport = [&](const std::string & childName, const AirportInfo & airport) {
-							ImGui::BeginChild(childName.c_str(), { 0, 80 }, true);
+							ImGui::BeginChild(childName.c_str(), { 0, 80 * getScale() }, true);
 							ImGui::Columns(2);
-							ImGui::SetColumnWidth(0, 75.f);
+							ImGui::SetColumnWidth(0, 75.f * getScale());
 							columns("Name", airport.airportName);
 							columns("City", airport.city);
 							columns("Country", airport.country);
@@ -298,7 +325,7 @@ void ClosestPlaneSystem::execute() {
 					planes.push_back(std::move(plane));
 
 					std::unique_lock<std::mutex> l(g_planesMutex);
-					g_planes = planes;
+					g_pendingPlanes = planes;
 				}
 			}
 		}
@@ -306,4 +333,8 @@ void ClosestPlaneSystem::execute() {
 			std::cerr << e.what() << '\n';
 		}
 	});
+}
+
+void ClosestPlaneSystem::handle(const kengine::packets::ImGuiScale & p) const {
+	g_scale = &p.scale;
 }
