@@ -95,7 +95,7 @@ ClosestPlaneSystem::ClosestPlaneSystem(kengine::EntityManager & em) : System(em)
 				if (!display)
 					return;
 
-				if (ImGui::Begin("Closest plane")) {
+				if (ImGui::Begin("Closest plane", &display)) {
 					const auto inputFloat = [](const char * label, float & f) {
 						float tmp = f;
 						if (ImGui::InputFloat(label, &tmp, 0.f, 0.f, "%.6f"))

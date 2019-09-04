@@ -20,7 +20,7 @@ NewSystem::NewSystem(kengine::EntityManager & em) : System(em), _em(em) {
 				if (!display)
 					return;
 
-				if (ImGui::Begin("NewSystem")) {
+				if (ImGui::Begin("NewSystem"), &display) {
 				}
 				ImGui::End();
 		});
