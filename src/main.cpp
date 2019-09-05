@@ -1,5 +1,6 @@
 #include "go_to_bin_dir.hpp"
 
+#include "ImGuiPluginSystem.hpp"
 #include "systems/LuaSystem.hpp"
 #include "systems/PySystem.hpp"
 #include "systems/ImGuiAdjustableSystem.hpp"
@@ -30,7 +31,9 @@ int main(int, char **av) {
 		kengine::ImGuiOverlaySystem,
 		kengine::ImGuiAdjustableSystem,
 		kengine::ImGuiEntityEditorSystem,
-		kengine::ImGuiEntitySelectorSystem
+		kengine::ImGuiEntitySelectorSystem,
+
+		ImGuiPluginSystem
 	>("plugins");
 
 	registerTypes(em);

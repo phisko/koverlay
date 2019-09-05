@@ -14,10 +14,18 @@
 
 #include "csv.hpp"
 #include "curl.hpp"
+#include "python.hpp"
 
 static float * g_scale = nullptr;
 static float getScale() {
 	return g_scale != nullptr ? *g_scale : 1.f;
+}
+
+EXPORT void drawImGui(float scale) {
+	if (ImGui::Begin("From plugin")) {
+
+	}
+	ImGui::End();
 }
 
 EXPORT kengine::ISystem * getSystem(kengine::EntityManager & em) {
