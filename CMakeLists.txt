@@ -47,6 +47,7 @@ target_include_directories(api INTERFACE common)
 set(exe_name koverlay)
 
 file(GLOB exeFiles src/*.cpp src/*.hpp
+	src/imgui_lua_bindings/*.cpp src/imgui_lua_bindings/*.hpp
         src/components/*.cpp src/components/*.hpp
         src/gameobjects/*.cpp src/gameobjects/*.hpp
         src/systems/*.cpp src/systems/*.hpp)
