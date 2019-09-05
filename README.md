@@ -8,5 +8,5 @@ ImGui windows are rendered as "always-on-top" windows over other Windows applica
 A top-screen menubar lets you start/stop various tools. This bar is automatically hidden when the overlay loses focus. Double clicking on the system tray icon will bring it back in focus.
 
 # Keyboard shortcuts
-Alt + A: grab focus and display the top-screen menubar
+Alt + W: grab focus and display the top-screen menubar
 Alt + Q: enable/disable the overlay
