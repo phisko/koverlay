@@ -133,7 +133,8 @@ ClosestPlaneSystem::ClosestPlaneSystem(kengine::EntityManager & em) : System(em)
 							f = tmp;
 					};
 
-					char buff[1024] = "";
+					char buff[1024];
+					strcpy_s(buff, g_filterAirport.c_str());
 					if (ImGui::InputText("Airport", buff, sizeof(buff)))
 						g_filterAirport = buff;
 					ImGui::InputFloat("Update frequency", &g_planesUpdateFrequency);
