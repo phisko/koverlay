@@ -35,8 +35,6 @@ struct PlaneInfo {
 
 	std::string origin;
 	std::string destination;
-
-	putils::json json;
 };
 
 struct AirportInfo {
@@ -65,36 +63,6 @@ static std::vector<PlaneInfo> g_pendingPlanes;
 static std::mutex g_planesMutex;
 static float g_planesUpdateTimer = 0.f;
 static float g_planesUpdateFrequency = 5.f;
-
-static void displayJSON(const char * name, const putils::json & json) {
-	if (json.is_string())
-		ImGui::Text("%s: %s", name, json.get<std::string>().c_str());
-	else if (json.is_null())
-		ImGui::Text("%s: null", name);
-	else if (json.is_boolean())
-		ImGui::Text("%s: %s", name, json.get<bool>() ? "true" : "false");
-	else if (json.is_number_float())
-		ImGui::Text("%s: %f", name, json.get<float>());
-	else if (json.is_number_integer())
-		ImGui::Text("%s: %d", name, json.get<int>());
-	else if (json.is_number_unsigned())
-		ImGui::Text("%s: %zu", name, json.get<unsigned int>());
-	else if (json.is_object()) {
-		if (ImGui::TreeNode(name)) {
-			for (const auto & obj : json.items())
-				displayJSON(obj.key().c_str(), obj.value());
-			ImGui::TreePop();
-		}
-	}
-	else if (json.is_array()) {
-		if (ImGui::TreeNode(name)) {
-			size_t i = 0;
-			for (const auto & obj : json)
-				displayJSON(putils::toString(i++).c_str(), obj);
-			ImGui::TreePop();
-		}
-	}
-}
 
 static void getPendingPlaneList(float deltaTime) {
 	std::unique_lock<std::mutex> l(g_planesMutex);
@@ -206,8 +174,6 @@ ClosestPlaneSystem::ClosestPlaneSystem(kengine::EntityManager & em) : System(em)
 						ImGui::NextColumn();
 
 						ImGui::Columns();
-
-						// displayJSON("json", plane.json);
 					}
 				}
 				ImGui::End();
@@ -270,6 +236,31 @@ static void parseAirlines() {
 	}
 }
 
+static PlaneInfo getPlaneInfo(const std::string & callSign, const std::string & country) {
+	PlaneInfo plane;
+
+	plane.callSign = callSign;
+	plane.country = country;
+
+	const auto t = ::time(nullptr);
+	const auto s = putils::curl::httpRequest("https://opensky-network.org/api/routes", {
+		{ "callsign", plane.callSign }
+		});
+
+	if (!putils::json::accept(s))
+		return plane;
+
+	const auto json = putils::json::parse(s);
+
+	plane.company = json["operatorIata"].get<std::string>();
+	plane.flightNumber = putils::toString(json["flightNumber"].get<int>());
+
+	plane.origin = json["route"][0].get<std::string>();
+	plane.destination = json["route"][1].get<std::string>();
+
+	return plane;
+}
+
 void ClosestPlaneSystem::execute() {
 	static bool first = true;
 	if (!first)
@@ -277,63 +268,38 @@ void ClosestPlaneSystem::execute() {
 	first = false;
 
 	g_thread = std::thread([&] {
-		try {
-			if (shouldDownloadAirports())
-				downloadAirports();
-			parseAirports();
-			parseAirlines();
+		if (shouldDownloadAirports())
+			downloadAirports();
 
-			while (_em.running) {
-				const auto s = putils::curl::httpRequest("https://opensky-network.org/api/states/all", {
-					{ "lamin", putils::toString(g_coordinates.latitudeA) },
-					{ "lomin", putils::toString(g_coordinates.longitudeA) },
-					{ "lamax", putils::toString(g_coordinates.latitudeB) },
-					{ "lomax", putils::toString(g_coordinates.longitudeB) }
+		parseAirports();
+		parseAirlines();
+
+		while (_em.running) {
+			const auto s = putils::curl::httpRequest("https://opensky-network.org/api/states/all", {
+				{ "lamin", putils::toString(g_coordinates.latitudeA) },
+				{ "lomin", putils::toString(g_coordinates.longitudeA) },
+				{ "lamax", putils::toString(g_coordinates.latitudeB) },
+				{ "lomax", putils::toString(g_coordinates.longitudeB) }
 				});
 
+			if (!_em.running)
+				break;
+
+			g_lastResponse = s;
+			if (!putils::json::accept(s))
+				continue;
+
+			const auto json = putils::json::parse(s);
+			std::vector<PlaneInfo> planes;
+
+			for (const auto & state : json["states"]) {
+				planes.push_back(getPlaneInfo(state[1].get<std::string>(), state[2].get<std::string>()));
 				if (!_em.running)
 					break;
 
-				g_lastResponse = s;
-				if (!putils::json::accept(s))
-					continue;
-
-				const auto json = putils::json::parse(s);
-				std::vector<PlaneInfo> planes;
-
-				for (const auto & state : json["states"]) {
-					PlaneInfo plane;
-					plane.callSign = state[1].get<std::string>();
-					plane.country = state[2].get<std::string>();
-
-					const auto t = ::time(nullptr);
-					const auto s = putils::curl::httpRequest("https://opensky-network.org/api/routes", {
-						{ "callsign", plane.callSign }
-					});
-					if (!_em.running)
-						break;
-
-					if (!putils::json::accept(s))
-						continue;
-
-					const auto json = putils::json::parse(s);
-					plane.json = json;
-
-					plane.company = json["operatorIata"].get<std::string>();
-					plane.flightNumber = putils::toString(json["flightNumber"].get<int>());
-
-					plane.origin = json["route"][0].get<std::string>();
-					plane.destination = json["route"][1].get<std::string>();
-
-					planes.push_back(std::move(plane));
-
-					std::unique_lock<std::mutex> l(g_planesMutex);
-					g_pendingPlanes = planes;
-				}
+				std::unique_lock<std::mutex> l(g_planesMutex);
+				g_pendingPlanes = planes;
 			}
-		}
-		catch (const std::exception & e) {
-			std::cerr << e.what() << '\n';
 		}
 	});
 }
