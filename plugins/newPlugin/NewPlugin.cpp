@@ -5,7 +5,7 @@ static const char * getName() {
 	return "NewPlugin";
 }
 
-static void imguiFunction() {
+static void imguiFunction(float scale) {
 	if (ImGui::Begin("NewPlugin", &PLUGIN_ENABLED)) {
 	}
 	ImGui::End();
