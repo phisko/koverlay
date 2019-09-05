@@ -32,7 +32,6 @@ int main(int, char **av) {
 		kengine::ImGuiAdjustableSystem,
 		kengine::ImGuiEntityEditorSystem,
 		kengine::ImGuiEntitySelectorSystem,
-
 		ImGuiPluginSystem
 	>("plugins");
 
