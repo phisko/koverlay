@@ -35,41 +35,6 @@ END_IMGUI_FUNC
 //Not allowed to use this function
 //    IMGUI_API ImDrawData*   GetDrawData();                              // valid after Render() and until the next call to NewFrame(). this is what you have to render.
 // Unsupported return type ImDrawData*
-//    IMGUI_API void          ShowDemoWindow(bool* p_open = NULL);        // create Demo window (previously called ShowTestWindow). demonstrate most ImGui features. call this to learn about the library! try to make it always available in your application!
-IMGUI_FUNCTION(ShowDemoWindow)
-OPTIONAL_BOOL_POINTER_ARG(p_open)
-CALL_FUNCTION_NO_RET(ShowDemoWindow, p_open)
-END_BOOL_POINTER(p_open)
-END_IMGUI_FUNC
-//    IMGUI_API void          ShowAboutWindow(bool* p_open = NULL);       // create About window. display Dear ImGui version, credits and build/system information.
-IMGUI_FUNCTION(ShowAboutWindow)
-OPTIONAL_BOOL_POINTER_ARG(p_open)
-CALL_FUNCTION_NO_RET(ShowAboutWindow, p_open)
-END_BOOL_POINTER(p_open)
-END_IMGUI_FUNC
-//    IMGUI_API void          ShowMetricsWindow(bool* p_open = NULL);     // create Metrics/Debug window. display Dear ImGui internals: draw commands (with individual draw calls and vertices), window list, basic internal state, etc.
-IMGUI_FUNCTION(ShowMetricsWindow)
-OPTIONAL_BOOL_POINTER_ARG(p_open)
-CALL_FUNCTION_NO_RET(ShowMetricsWindow, p_open)
-END_BOOL_POINTER(p_open)
-END_IMGUI_FUNC
-//    IMGUI_API void          ShowStyleEditor(ImGuiStyle* ref = NULL);    // add style editor block (not a window). you can pass in a reference ImGuiStyle structure to compare to, revert to and save to (else it uses the default style)
-// Unsupported arg type ImGuiStyle* ref = NULL
-//    IMGUI_API bool          ShowStyleSelector(const char* label);       // add style selector block (not a window), essentially a combo listing the default styles.
-IMGUI_FUNCTION(ShowStyleSelector)
-LABEL_ARG(label)
-CALL_FUNCTION(ShowStyleSelector, bool, label)
-PUSH_BOOL(ret)
-END_IMGUI_FUNC
-//    IMGUI_API void          ShowFontSelector(const char* label);        // add font selector block (not a window), essentially a combo listing the loaded fonts.
-IMGUI_FUNCTION(ShowFontSelector)
-LABEL_ARG(label)
-CALL_FUNCTION_NO_RET(ShowFontSelector, label)
-END_IMGUI_FUNC
-//    IMGUI_API void          ShowUserGuide();                            // add basic help/info block (not a window): how to manipulate ImGui as a end-user (mouse/keyboard controls).
-IMGUI_FUNCTION(ShowUserGuide)
-CALL_FUNCTION_NO_RET(ShowUserGuide)
-END_IMGUI_FUNC
 //    IMGUI_API const char*   GetVersion();                               // get the compiled version string e.g. "1.23" (essentially the compiled value for IMGUI_VERSION)
 IMGUI_FUNCTION(GetVersion)
 CALL_FUNCTION(GetVersion, const char*)
@@ -2489,36 +2454,12 @@ END_ENUM(Cond)
 
 //namespace ImGui
 
-//    IMGUI_API bool      InputFloat(const char* label, float* v, float step, float step_fast, int decimal_precision, ImGuiInputTextFlags flags = 0); // Use the 'const char* format' version instead of 'decimal_precision'!
-IMGUI_FUNCTION(InputFloat)
-LABEL_ARG(label)
-FLOAT_POINTER_ARG(v)
-NUMBER_ARG(step)
-NUMBER_ARG(step_fast)
-INT_ARG(decimal_precision)
-OPTIONAL_INT_ARG(flags, 0)
-CALL_FUNCTION(InputFloat, bool, label, v, step, step_fast, decimal_precision, flags)
-PUSH_BOOL(ret)
-END_FLOAT_POINTER(v)
-END_IMGUI_FUNC
 //    IMGUI_API bool      InputFloat2(const char* label, float v[2], int decimal_precision, ImGuiInputTextFlags flags = 0);
 // Unsupported arg type  float v[2]
 //    IMGUI_API bool      InputFloat3(const char* label, float v[3], int decimal_precision, ImGuiInputTextFlags flags = 0);
 // Unsupported arg type  float v[3]
 //    IMGUI_API bool      InputFloat4(const char* label, float v[4], int decimal_precision, ImGuiInputTextFlags flags = 0);
 // Unsupported arg type  float v[4]
-//    IMGUI_API bool      Begin(const char* name, bool* p_open, const ImVec2& size_on_first_use, float bg_alpha_override = -1.0f, ImGuiWindowFlags flags = 0); // Use SetNextWindowSize(size, ImGuiCond_FirstUseEver) + SetNextWindowBgAlpha() instead.
-IMGUI_FUNCTION(Begin)
-LABEL_ARG(name)
-BOOL_POINTER_ARG(p_open)
-IM_VEC_2_ARG(size_on_first_use)
-OPTIONAL_NUMBER_ARG(bg_alpha_override, -1.0f)
-OPTIONAL_INT_ARG(flags, 0)
-CALL_FUNCTION(Begin, bool, name, p_open, size_on_first_use, bg_alpha_override, flags)
-IF_RET_ADD_END_STACK(0)
-PUSH_BOOL(ret)
-END_BOOL_POINTER(p_open)
-END_IMGUI_FUNC
 END_STACK_START
 END_STACK_OPTION(0, End)
 END_STACK_END
