@@ -57,3 +57,20 @@ target_include_directories(${exe_name} PRIVATE src)
 target_link_libraries(${exe_name} kengine api)
 
 add_subdirectory(plugins)
+
+macro(SUBDIRLIST result curdir)
+    file(GLOB children RELATIVE ${curdir} ${curdir}/*)
+    set(dirlist "")
+    foreach(child ${children})
+        if(IS_DIRECTORY ${curdir}/${child})
+            list(APPEND dirlist ${child})
+        endif()
+    endforeach()
+    set(${result} ${dirlist})
+endmacro()
+
+SUBDIRLIST(SUBDIRS ${CMAKE_CURRENT_LIST_DIR}/examples)
+
+foreach(subdir ${SUBDIRS})
+    add_subdirectory(examples/${subdir})
+endforeach()
