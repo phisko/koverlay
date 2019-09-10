@@ -6,15 +6,7 @@ This new version features a greatly optimized memory architecture, better cache-
 
 ![koala](koala.png)
 
-## Installation
-
-The project uses git submodules extensively, and must therefore be cloned recursively.
-
-```
-git clone --recursive git@github.com:phiste/kengine
-```
-
-Alternatively, if using this resository as a submodule of your own project, make sure to init, sync and update your submodules in order to make sure the "putils" folder isn't empty.
+## C++ version
 
 The engine requires a **C++17** compiler.
 
