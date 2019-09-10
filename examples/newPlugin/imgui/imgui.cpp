@@ -6186,7 +6186,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Update common viewport flags
             ImGuiViewportFlags viewport_flags = (window->Viewport->Flags) & ~(ImGuiViewportFlags_TopMost | ImGuiViewportFlags_NoTaskBarIcon | ImGuiViewportFlags_NoDecoration);
             const bool is_short_lived_floating_window = (flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0;
-            viewport_flags |= ImGuiViewportFlags_TopMost;
+            if (flags & ImGuiWindowFlags_Tooltip)
+                viewport_flags |= ImGuiViewportFlags_TopMost;
             if (g.IO.ConfigViewportsNoTaskBarIcon || is_short_lived_floating_window)
                 viewport_flags |= ImGuiViewportFlags_NoTaskBarIcon;
             if (g.IO.ConfigViewportsNoDecoration || is_short_lived_floating_window)
