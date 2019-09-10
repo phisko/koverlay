@@ -12,9 +12,7 @@ namespace kengine {
 		void init() const;
 		void execute() noexcept final;
 
-#ifndef NDEBUG
 		void handle(kengine::packets::AddImGuiTool p);
-#endif
 
 	private:
 		kengine::EntityManager & _em;
