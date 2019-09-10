@@ -1,5 +1,0 @@
-add_library(pluginManager INTERFACE)
-target_include_directories(pluginManager INTERFACE .)
-if(UNIX)
-    target_link_libraries(pluginManager INTERFACE dl)
-endif()
