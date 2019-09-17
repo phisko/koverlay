@@ -17,8 +17,7 @@ static void registerTypes(kengine::EntityManager & em) {
 
 	registerTypes<
 		kengine::LuaComponent::script, kengine::LuaComponent::script_vector,
-		putils::Rect3f, putils::Point3f,
-		kengine::GraphicsComponent::Layer
+		putils::Rect3f, putils::Point3f
 	>(em);
 
 	if constexpr (!std::is_same<kengine::LuaComponent::script, kengine::PyComponent::script>::value)
