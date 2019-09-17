@@ -1,0 +1,4 @@
+[submodule "kengine"]
+	path = kengine
+	url = https://github.com/phisko/kengine
+	branch = develop
