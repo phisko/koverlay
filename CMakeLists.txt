@@ -48,9 +48,7 @@ set(exe_name koverlay)
 
 file(GLOB exeFiles src/*.cpp src/*.hpp
 	src/imgui_lua_bindings/*.cpp src/imgui_lua_bindings/*.hpp
-        src/components/*.cpp src/components/*.hpp
-        src/gameobjects/*.cpp src/gameobjects/*.hpp
-        src/systems/*.cpp src/systems/*.hpp)
+        src/types/*.cpp src/types/*.hpp)
 
 add_executable(${exe_name} ${exeFiles} ${commonFiles})
 target_include_directories(${exe_name} PRIVATE src)
