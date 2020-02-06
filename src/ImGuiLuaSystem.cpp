@@ -1,81 +1,95 @@
 #include "ImGuiLuaSystem.hpp"
 #include "EntityManager.hpp"
-#include "components/ImGuiComponent.hpp"
-#include "packets/AddImGuiTool.hpp"
-#include "systems/LuaSystem.hpp"
 
-static float * g_scale;
-static float getScale() {
-	return g_scale != nullptr ? *g_scale : 1.f;
-}
+#include "data/ImGuiComponent.hpp"
+#include "data/ImGuiToolComponent.hpp"
+#include "data/LuaStateComponent.hpp"
+#include "data/NameComponent.hpp"
 
-struct ToolInfo {
-	std::string name;
-	bool enabled;
-};
+#include "Directory.hpp"
 
-static ToolInfo & getToolInfo(const std::string & scriptName, bool & shouldRegisterTool) {
-	static std::unordered_map<std::string, ToolInfo *> scriptToolMap;
+static kengine::EntityManager * g_em;
+static sol::state * g_state;
 
-	ToolInfo * toolInfo = nullptr;
+// declarations
+static void initBindings();
+static void runScripts();
+//
+kengine::EntityCreator * ImGuiLuaSystem(kengine::EntityManager & em) {
+	g_em = &em;
 
-	if (scriptToolMap.find(scriptName) == scriptToolMap.end()) {
-		toolInfo = new ToolInfo{ "", true };
-		scriptToolMap[scriptName] = toolInfo;
-		shouldRegisterTool = true;
-	}
-	else
-		toolInfo = scriptToolMap[scriptName];
+	return [](kengine::Entity & system) {
+		initBindings();
 
-	return *toolInfo;
-}
-
-static void runScript(const std::string & scriptName, kengine::EntityManager & em, sol::state & state) {
-	bool shouldRegisterTool = false;
-	auto & toolInfo = getToolInfo(scriptName, shouldRegisterTool);
-
-	if (toolInfo.enabled) {
-		state["TOOL_ENABLED"] = true;
-
-		try {
-			state.script_file(scriptName);
-		}
-		catch (const std::exception & e) {
-			std::cerr << e.what() << std::endl;
-		}
-		toolInfo.enabled = state["TOOL_ENABLED"];
-
-		if (shouldRegisterTool) {
-			toolInfo.name = state["TOOL_NAME"];
-			em.send(kengine::packets::AddImGuiTool{ toolInfo.name.c_str(), toolInfo.enabled });
-		}
-	}
-}
-
-ImGuiLuaSystem::ImGuiLuaSystem(kengine::EntityManager & em) : System(em), _em(em) {
-	extern lua_State * lState;
-	extern void LoadImguiBindings();
-
-	auto & state = em.getSystem<kengine::LuaSystem>().getState();
-	lState = state;
-	LoadImguiBindings();
-
-	em += [&](kengine::Entity & e) {
-		e += kengine::ImGuiComponent([&] {
-			state["IMGUI_SCALE"] = getScale();
-
-			putils::Directory d("scripts");
-
-			d.for_each([&](const putils::Directory::File & f) {
-				const auto view = std::string_view(f.name);
-				const auto dot = view.find_last_of('.');
-				if (!f.isDirectory && dot != std::string_view::npos && view.substr(dot) == ".lua")
-					runScript(f.fullPath.c_str(), em, state);
-			});
+		system += kengine::ImGuiComponent([&] {
+			runScripts();
 		});
 	};
 }
 
-void ImGuiLuaSystem::handle(const kengine::packets::ImGuiScale & p) const {
-	g_scale = &p.scale;
+static void initBindings() {
+	extern lua_State * lState;
+	extern void LoadImguiBindings();
+
+	for (const auto & [e, state] : g_em->getEntities<kengine::LuaStateComponent>()) {
+		lState = *state.state;
+		LoadImguiBindings();
+
+		g_state = state.state;
+	}
+}
+
+// declarations
+static void runScript(const char * script);
+//
+static void runScripts() {
+	putils::Directory d("scripts");
+
+	d.for_each([&](const putils::Directory::File & f) {
+		const auto view = std::string_view(f.name);
+		const auto dot = view.find_last_of('.');
+		if (!f.isDirectory && dot != std::string_view::npos && view.substr(dot) == ".lua")
+			runScript(f.fullPath.c_str());
+	});
+}
+
+// declarations
+static kengine::Entity getEntityForScript(const char * script);
+//
+static void runScript(const char * script) {
+	auto e = getEntityForScript(script);
+	auto & tool = e.get<kengine::ImGuiToolComponent>();
+
+	if (!tool.enabled)
+		return;
+
+	(*g_state)["TOOL_ENABLED"] = tool.enabled;
+	try {
+		g_state->script_file(script);
+	}
+	catch (const std::exception & e) {
+		std::cerr << e.what() << std::endl;
+	}
+	tool.enabled = (*g_state)["TOOL_ENABLED"];
+}
+
+static kengine::Entity getEntityForScript(const char * script) {
+	static std::unordered_map<std::string, kengine::Entity::ID> ids;
+
+	const auto it = ids.find(script);
+	if (it != ids.end())
+		return g_em->getEntity(it->second);
+
+	return g_em->createEntity([&](kengine::Entity & e) {
+		ids[script] = e.id;
+		try {
+			g_state->script_file(script);
+		}
+		catch (const std::exception & e) {
+			std::cerr << e.what() << std::endl;
+		}
+		e += kengine::ImGuiToolComponent{ (*g_state)["TOOL_ENABLED"] };
+		const std::string name = (*g_state)["TOOL_NAME"];
+		e += kengine::NameComponent{ name };
+	});
 }

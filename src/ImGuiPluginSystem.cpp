@@ -1,28 +1,57 @@
 #include "ImGuiPluginSystem.hpp"
+#include "PluginManager.hpp"
 #include "EntityManager.hpp"
-#include "components/ImGuiComponent.hpp"
-#include "packets/AddImGuiTool.hpp"
 
-static float * g_scale;
-static float getScale() {
-	return g_scale != nullptr ? *g_scale : 1.f;
-}
+#include "functions/GetImGuiScale.hpp"
+#include "functions/Execute.hpp"
 
-ImGuiPluginSystem::ImGuiPluginSystem(kengine::EntityManager & em) : System(em), _em(em) {
-	em += [&](kengine::Entity & e) {
-		e += kengine::ImGuiComponent([&] {
-			static putils::PluginManager pm;
+#include "data/NameComponent.hpp"
+#include "data/ImGuiToolComponent.hpp"
+#include "data/ImGuiComponent.hpp"
 
-			bool * enabled;
-			const auto names = pm.rescanDirectoryWithReturn<1, const char *>("plugins", "getNameAndEnabled", &enabled);
-			for (const auto & name : names)
-				send(kengine::packets::AddImGuiTool{ name, *enabled });
+static kengine::EntityManager * g_em;
+static putils::PluginManager pm;
 
-			pm.execute("drawImGui", *GImGui, getScale());
-		});
+struct ImGuiContext;
+extern ImGuiContext * GImGui;
+
+// declarations
+static void execute(float deltaTime);
+static void drawImGui();
+//
+kengine::EntityCreator * ImGuiPluginSystem(kengine::EntityManager & em) {
+	g_em = &em;
+
+	return [](kengine::Entity & system) {
+		system += kengine::functions::Execute{ execute };
+		system += kengine::ImGuiComponent( drawImGui );
 	};
 }
 
-void ImGuiPluginSystem::handle(const kengine::packets::ImGuiScale & p) const {
-	g_scale = &p.scale;
+struct PluginEnabledPointerComponent {
+	bool * enabled;
+};
+
+static void execute(float deltaTime) {
+
+	bool * enabled;
+	const auto names = pm.rescanDirectoryWithReturn<1, const char *>("plugins", "getNameAndEnabled", &enabled);
+	for (const auto & name : names) {
+		*g_em += [&](kengine::Entity & e) {
+			e += kengine::NameComponent{ name };
+			e += PluginEnabledPointerComponent{ enabled };
+			e += kengine::ImGuiToolComponent{ *enabled };
+		};
+	}
+}
+
+static void drawImGui() {
+	for (const auto & [e, enabled, tool] : g_em->getEntities<PluginEnabledPointerComponent, kengine::ImGuiToolComponent>())
+		*enabled.enabled = tool.enabled;
+
+	pm.execute("drawImGui", *GImGui);
+
+	for (const auto & [e, enabled, tool] : g_em->getEntities<PluginEnabledPointerComponent, kengine::ImGuiToolComponent>())
+		tool.enabled = *enabled.enabled;
+
 }

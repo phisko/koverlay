@@ -35,7 +35,13 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL ${bindir}/minsizerel/plugins)
 
 set(KENGINE_LUA TRUE)
 set(KENGINE_PYTHON TRUE)
-set(KENGINE_IMGUI_OVERLAY TRUE)
+set(KENGINE_OPENGL TRUE)
+
+add_compile_definitions(
+    KENGINE_OPENGL_NO_DEBUG_TOOLS
+    KENGINE_OPENGL_NO_DEFAULT_SHADERS
+)
+
 add_subdirectory(kengine)
 
 ## API
@@ -72,3 +78,9 @@ SUBDIRLIST(SUBDIRS ${CMAKE_CURRENT_LIST_DIR}/examples)
 foreach(subdir ${SUBDIRS})
     add_subdirectory(examples/${subdir})
 endforeach()
+
+configure_file(koala.ico ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/resources/koala.ico COPYONLY)
+configure_file(koala.ico ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG}/resources/koala.ico COPYONLY)
+configure_file(koala.ico ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE}/resources/koala.ico COPYONLY)
+configure_file(koala.ico ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO}/resources/koala.ico COPYONLY)
+configure_file(koala.ico ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL}/resources/koala.ico COPYONLY)

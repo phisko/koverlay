@@ -1,5 +1,5 @@
 #include "registerTypes.hpp"
-#include "components/ImGuiComponent.hpp"
+#include "data/ImGuiComponent.hpp"
 
 void registerImGuiComponent(kengine::EntityManager & em) {
 	registerComponents<

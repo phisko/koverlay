@@ -1,4 +1,5 @@
 #include "registerTypes.hpp"
+#include "Color.hpp"
 
 #define REGISTER_FUNC_DECL(COMP) void register##COMP##Component(kengine::EntityManager & em);
 

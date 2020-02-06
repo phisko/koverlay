@@ -1,14 +1,6 @@
 #pragma once
 
-#include "System.hpp"
-#include "packets/ImGuiScale.hpp"
+#include "EntityCreator.hpp"
+namespace kengine { class EntityManager; }
 
-class ImGuiPluginSystem : public kengine::System<ImGuiPluginSystem, kengine::packets::ImGuiScale> {
-public:
-	ImGuiPluginSystem(kengine::EntityManager & em);
-
-	void handle(const kengine::packets::ImGuiScale & p) const;
-
-private:
-	kengine::EntityManager & _em;
-};
+kengine::EntityCreator * ImGuiPluginSystem(kengine::EntityManager & em);

@@ -1,5 +1,6 @@
 #include "registerTypes.hpp"
-#include "components/LuaComponent.hpp"
+#include "data/LuaComponent.hpp"
+#include "data/LuaTableComponent.hpp"
 
 void registerLuaComponent(kengine::EntityManager & em) {
 	registerComponents<

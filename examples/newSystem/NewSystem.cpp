@@ -1,37 +1,29 @@
-#include "NewSystem.hpp"
-
 #include "EntityManager.hpp"
 #include "Export.hpp"
 
-#include "packets/AddImGuiTool.hpp"
-#include "components/ImGuiComponent.hpp"
+#include "helpers/PluginHelper.hpp"
+
+#include "data/NameComponent.hpp"
+#include "data/ImGuiToolComponent.hpp"
+#include "data/ImGuiComponent.hpp"
 #include "imgui.h"
 
-EXPORT kengine::ISystem * getSystem(kengine::EntityManager & em) {
-	return new NewSystem(em);
-}
-
-static float * g_scale = nullptr;
-static float getScale() {
-	return g_scale != nullptr ? *g_scale : 1.f;
-}
-
-NewSystem::NewSystem(kengine::EntityManager & em) : System(em), _em(em) {
-	static bool display = false;
-	send(kengine::packets::AddImGuiTool{ "NewSystem", display });
+EXPORT void loadKenginePlugin(kengine::EntityManager & em) {
+	kengine::PluginHelper::initPlugin(em);
 
 	em += [&](kengine::Entity & e) {
-		e += kengine::ImGuiComponent([&em] {
-				if (!display)
-					return;
+		e += kengine::NameComponent{ "New System" };
 
-				if (ImGui::Begin("NewSystem"), &display) {
-				}
-				ImGui::End();
+		auto & tool = e.attach<kengine::ImGuiToolComponent>();
+		tool.enabled = false;
+
+		e += kengine::ImGuiComponent([&] {
+			if (!tool.enabled)
+				return;
+
+			if (ImGui::Begin("NewSystem", &tool.enabled)) {
+			}
+			ImGui::End();
 		});
 	};
-}
-
-void NewSystem::handle(const kengine::packets::ImGuiScale & p) const {
-	g_scale = &p.scale;
 }
