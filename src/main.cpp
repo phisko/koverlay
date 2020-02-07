@@ -169,6 +169,7 @@ static void showContextMenu(bool shown) {
 	DestroyMenu(hMenu);
 	if (!shown)
 		return;
+	glfwFocusWindow(g_window);
 	hMenu = CreatePopupMenu();
 
 	size_t i = 0;
