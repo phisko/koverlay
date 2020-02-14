@@ -15,7 +15,7 @@ EXPORT void loadKenginePlugin(kengine::EntityManager & em) {
 		e += kengine::NameComponent{ "Controller" };
 
 		auto & tool = e.attach<kengine::ImGuiToolComponent>();
-		tool.enabled = false;
+		tool.enabled = true;
 
 		e += kengine::ImGuiComponent([&] {
 			if (!tool.enabled)
