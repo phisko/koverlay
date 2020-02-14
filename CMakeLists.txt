@@ -52,9 +52,9 @@ target_include_directories(api INTERFACE common)
 
 set(exe_name koverlay)
 
-file(GLOB exeFiles src/*.cpp src/*.hpp
-	src/imgui_lua_bindings/*.cpp src/imgui_lua_bindings/*.hpp
-        src/types/*.cpp src/types/*.hpp)
+file(GLOB exeFiles
+    src/*.cpp src/*.hpp
+    src/types/*.cpp src/types/*.hpp)
 
 add_executable(${exe_name} ${exeFiles} ${commonFiles})
 target_include_directories(${exe_name} PRIVATE src)
