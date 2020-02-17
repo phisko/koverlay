@@ -16,6 +16,7 @@ static_assert(false, "Only implemented on Windows for now");
 #include "systems/LuaSystem.hpp"
 #include "systems/PySystem.hpp"
 #include "systems/ImGuiToolSystem.hpp"
+#include "systems/ImGuiPromptSystem.hpp"
 #include "systems/opengl/OpenGLSystem.hpp"
 
 #include "ImGuiPluginSystem.hpp"
@@ -76,6 +77,7 @@ static void addSystems() {
 	*g_em += kengine::ImGuiToolSystem(*g_em);
 	*g_em += ImGuiPluginSystem(*g_em);
 	*g_em += ImGuiLuaSystem(*g_em);
+	*g_em += ImGuiPromptSystem(*g_em);
 }
 
 static void loadPlugins() {
