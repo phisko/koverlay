@@ -29,6 +29,7 @@ static_assert(false, "Only implemented on Windows for now");
 #include "functions/Execute.hpp"
 
 #include "helpers/MainLoop.hpp"
+#include "helpers/SortHelper.hpp"
 
 static kengine::EntityManager * g_em;
 static GLFWwindow * g_window;
@@ -136,14 +137,15 @@ static LRESULT wndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam) {
 		const auto id = LOWORD(wParam);
 		size_t i = 0;
 		bool found = false;
-		for (auto & [e, name, tool] : g_em->getEntities<kengine::NameComponent, kengine::ImGuiToolComponent>()) {
+		auto sorted = kengine::SortHelper::getNameSortedEntities<0, kengine::ImGuiToolComponent>(*g_em);
+		for (auto & [e, name, tool] : sorted) {
 			if (id != i) {
 				++i;
 				continue;
 			}
 
 			if (g_enabled)
-				tool.enabled = !tool.enabled;
+				tool->enabled = !tool->enabled;
 			else {
 				auto & save = e.attach<ToolSave>();
 				save.enabled = !save.enabled;
@@ -175,8 +177,9 @@ static void showContextMenu(bool shown) {
 	hMenu = CreatePopupMenu();
 
 	size_t i = 0;
-	for (const auto & [e, name, tool] : g_em->getEntities<kengine::NameComponent, kengine::ImGuiToolComponent>()) {
-		AppendMenu(hMenu, MF_STRING, i, name.name);
+	const auto sorted = kengine::SortHelper::getNameSortedEntities<0, kengine::ImGuiToolComponent>(*g_em);
+	for (const auto & [e, name, tool] : sorted) {
+		AppendMenu(hMenu, MF_STRING, i, name->name);
 		++i;
 	}
 	AppendMenu(hMenu, MF_STRING, i, "Exit");

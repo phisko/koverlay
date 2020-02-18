@@ -2,6 +2,7 @@
 #include "Export.hpp"
 
 #include "helpers/PluginHelper.hpp"
+#include "helpers/SortHelper.hpp"
 
 #include "data/NameComponent.hpp"
 #include "data/ImGuiToolComponent.hpp"
@@ -21,9 +22,11 @@ EXPORT void loadKenginePlugin(kengine::EntityManager & em) {
 			if (!tool.enabled)
 				return;
 
-			if (ImGui::Begin("Koverlay", &tool.enabled))
-				for (const auto & [e, tool, name] : em.getEntities<kengine::ImGuiToolComponent, kengine::NameComponent>())
-					ImGui::Checkbox(name.name, &tool.enabled);
+			if (ImGui::Begin("Koverlay", &tool.enabled)) {
+				const auto sorted = kengine::SortHelper::getNameSortedEntities<0, kengine::ImGuiToolComponent>(em);
+				for (const auto & [e, name, tool] : sorted)
+					ImGui::Checkbox(name->name, &tool->enabled);
+			}
 			ImGui::End();
 		});
 	};
