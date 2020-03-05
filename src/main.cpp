@@ -101,7 +101,7 @@ static void setupWindow() {
 
 	NOTIFYICONDATA nid;
 	nid.cbSize = sizeof(nid);
-	nid.uID = std::hash<const char *>()("koala overlay");
+	nid.uID = (UINT)std::hash<const char *>()("koala overlay");
 	nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
 	nid.hIcon = (HICON)LoadImage(nullptr, "resources/koala.ico", IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE);
 	nid.hWnd = glfwGetWin32Window(g_window);
