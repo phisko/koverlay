@@ -4,16 +4,15 @@ ImGui windows are rendered as "always-on-top" windows over other Windows applica
 
 ![koverlay](https://github.com/phisko/koverlay/blob/master/screenshot.png)
 
-# Bar
-A top-screen menubar lets you start/stop various tools. This bar is automatically hidden when the overlay loses focus. Double clicking on the system tray icon will bring it back in focus.
+# System tray icon
+Right-clicking on the system tray icon lets you start/stop various tools.
 
-# Keyboard shortcuts
-Alt + W: grab focus and display the top-screen menubar
+# Keyboard shortcut
 Alt + Q: enable/disable the overlay
 
 # Creating tools
 
-Tools can be created in three different ways: lua scripts, C++ plugins, and `kengine` Systems (which are also loaded as plugins). All these tools may be dropped in and hot-loaded at runtime, although modification and re-loading is not supported.
+Tools can be created in three different ways: lua scripts, C++ plugins, and `kengine` Systems (which are also loaded as plugins).
 
 ## Lua scripts
 
@@ -29,8 +28,6 @@ Scripts should also set a global `TOOL_ENABLED` variable according to what `imgu
 shouldDraw, TOOL_ENABLED = imgui.Begin("Example", TOOL_ENABLED)
 ```
 
-Scripts may also access the `IMGUI_SCALE` global variable. This is a floating point value that should be used to scale child boxes and such. Users may modify this freely to adapt the overlay to their screen DPI. Note that texts are automatically scaled.
-
 ### Example
 
 An example lua script can be found [here](examples/example.lua).
@@ -43,7 +40,7 @@ Plugins should link with the `ImGui` version provided in `examples/newPlugin` to
 
 Plugins should include the [framework.hpp](examples/newPlugin/framework.hpp) file provided in `examples/newPlugin`. For those who care, this defines some trampoline functions which take care of getting the `GImGui` context from the main executable's address space and setting up a `PLUGIN_ENABLED` variable, used to identify the state of the tool for the system tray context menu and the top-screen menubar.
 
-Plugins simply have to define a `const char * getName()` function and a `void imguiFunction(float scale)` function. The `scale` parameter is a floating point value that should be used to scale child boxes and such. Users may modify this freely to adapt the overlay to their screen DPI. Note that texts are automatically scaled.
+Plugins simply have to define a `const char * getName()` function and a `void imguiFunction()` function.
 
 ### Example
 
@@ -57,9 +54,7 @@ These plugins can be added to the `plugins` directory, next to the executable, a
 
 Plugins should link with the `kengine` version used to compile the overlay's main executable to ensure ABI compatibility (as the internal `kengine` data structures may change between versions).
 
-Plugins simply have to define a `kengine::ISystem * getSystem(kengine::EntityManager & em)` function that returns a pointer to the user-defined system.
-
-The custom system should handle the [ImGuiScale](kengine/common/packets/ImGuiScale.hpp) datapacket, which provides a reference to a `scale` variable. This is a floating point value that should be used to scale child boxes and such. Users may modify this freely to adapt the overlay to their screen DPI. Note that texts are automatically scaled.
+Plugins simply have to define a `void loadKenginePlugin(kengine::EntityManager & em)` function that creates a `kengine::Entity` and attaches whatever behavior the plugin needs.
 
 ### Example
 
