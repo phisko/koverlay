@@ -6,6 +6,8 @@
 #include "data/LuaStateComponent.hpp"
 #include "data/NameComponent.hpp"
 
+#include "functions/GetImGuiScale.hpp"
+
 #include "Directory.hpp"
 
 static kengine::EntityManager * g_em;
@@ -43,6 +45,11 @@ static void initBindings() {
 static void runScript(const char * script);
 //
 static void runScripts() {
+	float scale = 1.f;
+	for (const auto & [e, getScale] : g_em->getEntities<kengine::functions::GetImGuiScale>())
+		scale = getScale();
+	(*g_state)["IMGUI_SCALE"] = scale;
+
 	putils::Directory d("scripts");
 
 	d.for_each([&](const putils::Directory::File & f) {

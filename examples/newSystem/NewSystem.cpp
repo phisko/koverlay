@@ -6,7 +6,13 @@
 #include "data/NameComponent.hpp"
 #include "data/ImGuiToolComponent.hpp"
 #include "data/ImGuiComponent.hpp"
+
+#include "functions/GetImGuiScale.hpp"
+
 #include "imgui.h"
+
+// can use this function to properly scale child windows and other elements
+static float getScale(kengine::EntityManager & em);
 
 EXPORT void loadKenginePlugin(kengine::EntityManager & em) {
 	kengine::PluginHelper::initPlugin(em);
@@ -26,4 +32,10 @@ EXPORT void loadKenginePlugin(kengine::EntityManager & em) {
 			ImGui::End();
 		});
 	};
+}
+
+static float getScale(kengine::EntityManager & em) {
+	for (const auto & [e, getScale] : em.getEntities<kengine::functions::GetImGuiScale>())
+		return getScale();
+	return 1.f;
 }

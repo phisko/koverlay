@@ -2,6 +2,8 @@
 static_assert(false, "Only implemented on Windows for now");
 #endif
 
+#include <optional>
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
@@ -17,6 +19,7 @@ static_assert(false, "Only implemented on Windows for now");
 #include "systems/PySystem.hpp"
 #include "systems/ImGuiToolSystem.hpp"
 #include "systems/ImGuiPromptSystem.hpp"
+#include "systems/ImGuiAdjustableSystem.hpp"
 #include "systems/opengl/OpenGLSystem.hpp"
 
 #include "ImGuiPluginSystem.hpp"
@@ -26,6 +29,7 @@ static_assert(false, "Only implemented on Windows for now");
 #include "data/ImGuiToolComponent.hpp"
 #include "data/WindowComponent.hpp"
 #include "data/GLFWWindowComponent.hpp"
+#include "data/AdjustableComponent.hpp"
 #include "functions/Execute.hpp"
 
 #include "helpers/MainLoop.hpp"
@@ -37,11 +41,16 @@ static HHOOK g_hook;
 static WNDPROC g_prevWndProc;
 
 // declarations
+struct Options {
+	std::optional<float> scale;
+};
+static Options parseOptions(int ac, const char ** av);
 static void addSystems();
+static void setScale(float scale);
 static void setupWindow();
 static void loadPlugins();
 //
-int main(int, char **av) {
+int main(int ac, const char **av) {
 	ShowWindow(GetConsoleWindow(), SW_HIDE);
 
 	putils::goToBinDir(av[0]);
@@ -57,6 +66,9 @@ int main(int, char **av) {
 	};
 
 	addSystems();
+	const auto options = parseOptions(ac, av);
+	if (options.scale)
+		setScale(*options.scale);
 	setupWindow();
 	loadPlugins();
 
@@ -70,15 +82,42 @@ int main(int, char **av) {
 	return 0;
 }
 
+static Options parseOptions(int ac, const char ** av) {
+	Options ret;
+
+	for (int i = 1; i < ac; ++i)
+		if (strcmp(av[i], "--scale") == 0) {
+			++i;
+			if (i >= ac)
+				return ret;
+			ret.scale = (float)atof(av[i]);
+		}
+
+	return ret;
+}
+
 static void addSystems() {
 	*g_em += kengine::OpenGLSystem(*g_em);
 	*g_em += kengine::LuaSystem(*g_em);
 	*g_em += kengine::PySystem(*g_em);
-	// *g_em += kengine::ImGuiAdjustableSystem(*g_em);
+	*g_em += kengine::ImGuiAdjustableSystem(*g_em);
 	*g_em += kengine::ImGuiToolSystem(*g_em);
 	*g_em += ImGuiPluginSystem(*g_em);
 	*g_em += ImGuiLuaSystem(*g_em);
 	*g_em += ImGuiPromptSystem(*g_em);
+}
+
+static void setScale(float scale) {
+	for (const auto & [e, adjustable] : g_em->getEntities<kengine::AdjustableComponent>()) {
+		if (adjustable.section != "ImGui")
+			continue;
+		for (auto & val : adjustable.values)
+			if (val.name == "Scale") {
+				auto & storage = std::get<kengine::AdjustableComponent::Value::FloatStorage>(val.storage);
+				*(storage.ptr) = scale;
+				storage.value = scale;
+			}
+	}
 }
 
 static void loadPlugins() {

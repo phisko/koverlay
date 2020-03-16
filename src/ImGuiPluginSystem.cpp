@@ -33,7 +33,6 @@ struct PluginEnabledPointerComponent {
 };
 
 static void execute(float deltaTime) {
-
 	bool * enabled;
 	const auto names = pm.rescanDirectoryWithReturn<1, const char *>("plugins", "getNameAndEnabled", &enabled);
 	for (const auto & name : names) {
@@ -46,10 +45,14 @@ static void execute(float deltaTime) {
 }
 
 static void drawImGui() {
+	float scale = 1.f;
+	for (const auto & [e, getScale] : g_em->getEntities<kengine::functions::GetImGuiScale>())
+		scale = getScale();
+
 	for (const auto & [e, enabled, tool] : g_em->getEntities<PluginEnabledPointerComponent, kengine::ImGuiToolComponent>())
 		*enabled.enabled = tool.enabled;
 
-	pm.execute("drawImGui", *GImGui);
+	pm.execute("drawImGui", *GImGui, scale);
 
 	for (const auto & [e, enabled, tool] : g_em->getEntities<PluginEnabledPointerComponent, kengine::ImGuiToolComponent>())
 		tool.enabled = *enabled.enabled;

@@ -28,6 +28,8 @@ Scripts should also set a global `TOOL_ENABLED` variable according to what `imgu
 shouldDraw, TOOL_ENABLED = imgui.Begin("Example", TOOL_ENABLED)
 ```
 
+A user-provided scale factor can be accessed through the `IMGUI_SCALE` global variable. This should be used to properly scale child windows and other elements.
+
 ### Example
 
 An example lua script can be found [here](examples/example.lua).
@@ -42,6 +44,8 @@ Plugins should include the [framework.hpp](examples/newPlugin/framework.hpp) fil
 
 Plugins simply have to define a `const char * getName()` function and a `void imguiFunction()` function.
 
+A user-provided scale factor can be accessed through the `g_scale` global variable. This should be used to properly scale child windows and other elements.
+
 ### Example
 
 An example plugin can be found [here](examples/newPlugin/NewPlugin.cpp).
@@ -55,6 +59,8 @@ These plugins can be added to the `plugins` directory, next to the executable, a
 Plugins should link with the `kengine` version used to compile the overlay's main executable to ensure ABI compatibility (as the internal `kengine` data structures may change between versions).
 
 Plugins simply have to define a `void loadKenginePlugin(kengine::EntityManager & em)` function that creates a `kengine::Entity` and attaches whatever behavior the plugin needs.
+
+A user-provided scale factor can be accessed through the `GetImGuiScale` function component. This should be used to properly scale child windows and other elements.
 
 ### Example
 

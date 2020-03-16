@@ -1,5 +1,7 @@
 #pragma once
 
+static float g_scale;
+
 static bool PLUGIN_ENABLED; // Used to know if window is open
 static const char * getName();
 static void imguiFunction();
@@ -19,10 +21,11 @@ EXPORT const char * getNameAndEnabled(bool ** outEnabled) {
 struct ImGuiContext;
 extern ImGuiContext * GImGui;
 
-EXPORT void drawImGui(ImGuiContext & context) {
+EXPORT void drawImGui(ImGuiContext & context, float scale) {
 	if (!PLUGIN_ENABLED)
 		return;
 	GImGui = &context;
+	g_scale = scale;
 
 	imguiFunction();
 }

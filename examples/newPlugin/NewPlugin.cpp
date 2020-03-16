@@ -6,6 +6,7 @@ static const char * getName() {
 }
 
 static void imguiFunction() {
+	// can use g_scale to properly scale child windows and other elements
 	if (ImGui::Begin("NewPlugin", &PLUGIN_ENABLED)) {
 	}
 	ImGui::End();
