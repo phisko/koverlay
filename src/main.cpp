@@ -169,8 +169,16 @@ static void toggleAllTools();
 //
 static LRESULT wndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam) {
 	if (umsg == MY_SYSTEM_TRAY_MESSAGE) {
-		if (lParam == WM_RBUTTONUP)
+		switch (lParam) {
+		case WM_RBUTTONUP:
 			showContextMenu(true);
+			break;
+		case WM_LBUTTONDBLCLK:
+			toggleAllTools();
+			break;
+		default:
+			break;
+		}
 	}
 	else if (umsg == WM_COMMAND) { // In context menu
 		const auto id = LOWORD(wParam);
