@@ -1,0 +1,112 @@
+{
+	"components": [
+		{
+			"type": "kengine::AdjustableComponent",
+			"header": "data/AdjustableComponent.hpp"
+		},
+		{
+			"type": "kengine::WindowComponent",
+			"header": "data/WindowComponent.hpp"
+		},
+		{
+			"type": "kengine::functions::Execute",
+			"header": "functions/Execute.hpp"
+		},
+		{
+			"type": "kengine::ImGuiToolComponent",
+			"header": "data/ImGuiToolComponent.hpp"
+		},
+		{
+			"type": "kengine::InstanceComponent",
+			"header": "data/InstanceComponent.hpp"
+		},
+		{
+			"type": "kengine::LuaComponent",
+			"header": "data/LuaComponent.hpp"
+		},
+		{
+			"type": "kengine::LuaTableComponent",
+			"header": "data/LuaTableComponent.hpp"
+		},
+		{
+			"type": "kengine::ModelComponent",
+			"header": "data/ModelComponent.hpp"
+		},
+		{
+			"type": "kengine::NameComponent",
+			"header": "data/NameComponent.hpp"
+		},
+		{
+			"type": "kengine::PythonComponent",
+			"header": "data/PythonComponent.hpp"
+		},
+		{
+			"type": "kengine::SelectedComponent",
+			"header": "data/SelectedComponent.hpp"
+		},
+		{
+			"type": "kengine::TimeModulatorComponent",
+			"header": "data/TimeModulatorComponent.hpp"
+		},
+		{
+			"type": "kengine::meta::AttachTo",
+			"header": "meta/AttachTo.hpp"
+		},
+		{
+			"type": "kengine::meta::Attributes",
+			"header": "meta/Attributes.hpp"
+		},
+		{
+			"type": "kengine::meta::Copy",
+			"header": "meta/Copy.hpp"
+		},
+		{
+			"type": "kengine::meta::Count",
+			"header": "meta/Count.hpp"
+		},
+		{
+			"type": "kengine::meta::DetachFrom",
+			"header": "meta/DetachFrom.hpp"
+		},
+		{
+			"type": "kengine::meta::DisplayImGui",
+			"header": "meta/DisplayImGui.hpp"
+		},
+		{
+			"type": "kengine::meta::EditImGui",
+			"header": "meta/EditImGui.hpp"
+		},
+		{
+			"type": "kengine::meta::ForEachEntity",
+			"header": "meta/ForEachEntity.hpp"
+		},
+		{
+			"type": "kengine::meta::ForEachEntityWithout",
+			"header": "meta/ForEachEntity.hpp"
+		},
+		{
+			"type": "kengine::meta::Get",
+			"header": "meta/Get.hpp"
+		},
+		{
+			"type": "kengine::meta::Has",
+			"header": "meta/Has.hpp"
+		},
+		{
+			"type": "kengine::meta::LoadFromJSON",
+			"header": "meta/LoadFromJSON.hpp"
+		},
+		{
+			"type": "kengine::meta::MatchString",
+			"header": "meta/MatchString.hpp"
+		},
+		{
+			"type": "kengine::meta::SaveToJSON",
+			"header": "meta/SaveToJSON.hpp"
+		},
+		{
+			"type": "kengine::meta::Size",
+			"header": "meta/Size.hpp"
+		}
+	]
+}

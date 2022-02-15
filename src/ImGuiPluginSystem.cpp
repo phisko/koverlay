@@ -1,60 +1,62 @@
 #include "ImGuiPluginSystem.hpp"
 #include "PluginManager.hpp"
-#include "EntityManager.hpp"
+#include "kengine.hpp"
 
-#include "functions/GetImGuiScale.hpp"
+// kengine data
+#include "data/NameComponent.hpp"
+#include "data/ImGuiScaleComponent.hpp"
+#include "data/ImGuiToolComponent.hpp"
+
+// kengine functions
 #include "functions/Execute.hpp"
 
-#include "data/NameComponent.hpp"
-#include "data/ImGuiToolComponent.hpp"
-#include "data/ImGuiComponent.hpp"
-
-static kengine::EntityManager * g_em;
-static putils::PluginManager pm;
 
 struct ImGuiContext;
 extern ImGuiContext * GImGui;
 
-// declarations
-static void execute(float deltaTime);
-static void drawImGui();
-//
-kengine::EntityCreator * ImGuiPluginSystem(kengine::EntityManager & em) {
-	g_em = &em;
+struct impl {
+	static inline putils::PluginManager pm;
 
-	return [](kengine::Entity & system) {
+	static void init(kengine::Entity & system) noexcept {
 		system += kengine::functions::Execute{ execute };
-		system += kengine::ImGuiComponent( drawImGui );
-	};
-}
+	}
 
-struct PluginEnabledPointerComponent {
-	bool * enabled;
+	struct PluginEnabledPointerComponent {
+		bool * enabled;
+	};
+
+	static void execute(float deltaTime) noexcept {
+		bool * enabled;
+		const auto names = pm.rescanDirectoryWithReturn<1, const char *>("plugins", "getNameAndEnabled", &enabled);
+		for (const auto & name : names) {
+			kengine::entities += [&](kengine::Entity & e) {
+				e += kengine::NameComponent{ name };
+				e += PluginEnabledPointerComponent{ enabled };
+				e += kengine::ImGuiToolComponent{ *enabled };
+			};
+		}
+
+		drawImGui();
+	}
+
+	static void drawImGui() noexcept {
+		for (const auto & [e, enabled, tool] : kengine::entities.with<PluginEnabledPointerComponent, kengine::ImGuiToolComponent>())
+			*enabled.enabled = tool.enabled;
+
+		pm.execute("drawImGui", *GImGui, getScale());
+
+		for (const auto & [e, enabled, tool] : kengine::entities.with<PluginEnabledPointerComponent, kengine::ImGuiToolComponent>())
+			tool.enabled = *enabled.enabled;
+	}
+
+	static float getScale() noexcept {
+		float scale = 1.f;
+		for (const auto & [e, comp] : kengine::entities.with<kengine::ImGuiScaleComponent>())
+			scale *= comp.scale;
+		return scale;
+	}
 };
 
-static void execute(float deltaTime) {
-	bool * enabled;
-	const auto names = pm.rescanDirectoryWithReturn<1, const char *>("plugins", "getNameAndEnabled", &enabled);
-	for (const auto & name : names) {
-		*g_em += [&](kengine::Entity & e) {
-			e += kengine::NameComponent{ name };
-			e += PluginEnabledPointerComponent{ enabled };
-			e += kengine::ImGuiToolComponent{ *enabled };
-		};
-	}
-}
-
-static void drawImGui() {
-	float scale = 1.f;
-	for (const auto & [e, getScale] : g_em->getEntities<kengine::functions::GetImGuiScale>())
-		scale = getScale();
-
-	for (const auto & [e, enabled, tool] : g_em->getEntities<PluginEnabledPointerComponent, kengine::ImGuiToolComponent>())
-		*enabled.enabled = tool.enabled;
-
-	pm.execute("drawImGui", *GImGui, scale);
-
-	for (const auto & [e, enabled, tool] : g_em->getEntities<PluginEnabledPointerComponent, kengine::ImGuiToolComponent>())
-		tool.enabled = *enabled.enabled;
-
+kengine::EntityCreator * ImGuiPluginSystem() noexcept {
+	return impl::init;
 }

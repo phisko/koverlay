@@ -1,28 +1,87 @@
-#include "registerTypes.hpp"
-#include "Color.hpp"
 
-#define REGISTER_FUNC_DECL(COMP) void register##COMP##Component(kengine::EntityManager & em);
+namespace types{
+	void registerTypes() noexcept {
 
-REGISTER_FUNC_DECL(Adjustable);
-REGISTER_FUNC_DECL(ImGui);
-REGISTER_FUNC_DECL(Lua);
-REGISTER_FUNC_DECL(Py);
+		extern void registerkengineAdjustableComponent() noexcept;
+		registerkengineAdjustableComponent();
 
-#define REGISTER_FUNC_NAME(COMP) register##COMP##Component
+		extern void registerkengineWindowComponent() noexcept;
+		registerkengineWindowComponent();
 
-using RegisterFunc = void(*)(kengine::EntityManager &);
-static const RegisterFunc funcs[] = {
-	REGISTER_FUNC_NAME(Adjustable),
-	REGISTER_FUNC_NAME(ImGui),
-	REGISTER_FUNC_NAME(Lua),
-	REGISTER_FUNC_NAME(Py),
-};
+		extern void registerkenginefunctionsExecute() noexcept;
+		registerkenginefunctionsExecute();
 
-void registerTypes(kengine::EntityManager & em) {
-	registerTypes<
-		putils::Color, putils::NormalizedColor
-	>(em);
+		extern void registerkengineImGuiToolComponent() noexcept;
+		registerkengineImGuiToolComponent();
 
-	for (const auto f : funcs)
-		f(em);
+		extern void registerkengineInstanceComponent() noexcept;
+		registerkengineInstanceComponent();
+
+		extern void registerkengineLuaComponent() noexcept;
+		registerkengineLuaComponent();
+
+		extern void registerkengineLuaTableComponent() noexcept;
+		registerkengineLuaTableComponent();
+
+		extern void registerkengineModelComponent() noexcept;
+		registerkengineModelComponent();
+
+		extern void registerkengineNameComponent() noexcept;
+		registerkengineNameComponent();
+
+		extern void registerkenginePythonComponent() noexcept;
+		registerkenginePythonComponent();
+
+		extern void registerkengineSelectedComponent() noexcept;
+		registerkengineSelectedComponent();
+
+		extern void registerkengineTimeModulatorComponent() noexcept;
+		registerkengineTimeModulatorComponent();
+
+		extern void registerkenginemetaAttachTo() noexcept;
+		registerkenginemetaAttachTo();
+
+		extern void registerkenginemetaAttributes() noexcept;
+		registerkenginemetaAttributes();
+
+		extern void registerkenginemetaCopy() noexcept;
+		registerkenginemetaCopy();
+
+		extern void registerkenginemetaCount() noexcept;
+		registerkenginemetaCount();
+
+		extern void registerkenginemetaDetachFrom() noexcept;
+		registerkenginemetaDetachFrom();
+
+		extern void registerkenginemetaDisplayImGui() noexcept;
+		registerkenginemetaDisplayImGui();
+
+		extern void registerkenginemetaEditImGui() noexcept;
+		registerkenginemetaEditImGui();
+
+		extern void registerkenginemetaForEachEntity() noexcept;
+		registerkenginemetaForEachEntity();
+
+		extern void registerkenginemetaForEachEntityWithout() noexcept;
+		registerkenginemetaForEachEntityWithout();
+
+		extern void registerkenginemetaGet() noexcept;
+		registerkenginemetaGet();
+
+		extern void registerkenginemetaHas() noexcept;
+		registerkenginemetaHas();
+
+		extern void registerkenginemetaLoadFromJSON() noexcept;
+		registerkenginemetaLoadFromJSON();
+
+		extern void registerkenginemetaMatchString() noexcept;
+		registerkenginemetaMatchString();
+
+		extern void registerkenginemetaSaveToJSON() noexcept;
+		registerkenginemetaSaveToJSON();
+
+		extern void registerkenginemetaSize() noexcept;
+		registerkenginemetaSize();
+
+	}
 }

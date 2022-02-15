@@ -4,7 +4,6 @@ static_assert(false, "Only implemented on Windows for now");
 
 #include <optional>
 
-#include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
 #include <windowsx.h>
@@ -12,279 +11,277 @@ static_assert(false, "Only implemented on Windows for now");
 # include <GLFW/glfw3native.h>
 #undef GLFW_EXPOSE_NATIVE_WIN32
 
+// putils
 #include "go_to_bin_dir.hpp"
 #include "PluginManager.hpp"
 
-#include "systems/LuaSystem.hpp"
-#include "systems/PySystem.hpp"
-#include "systems/ImGuiToolSystem.hpp"
-#include "systems/ImGuiPromptSystem.hpp"
-#include "systems/ImGuiAdjustableSystem.hpp"
+// kengine systems
+#include "systems/glfw/GLFWSystem.hpp"
+#include "systems/imgui_tool/ImGuiToolSystem.hpp"
+#include "systems/imgui_prompt/ImGuiPromptSystem.hpp"
+#include "systems/imgui_adjustable/ImGuiAdjustableSystem.hpp"
+#include "systems/lua/LuaSystem.hpp"
 #include "systems/opengl/OpenGLSystem.hpp"
+#include "systems/python/PythonSystem.hpp"
 
-#include "ImGuiPluginSystem.hpp"
-#include "ImGuiLuaSystem.hpp"
-
+// kengine data
 #include "data/NameComponent.hpp"
 #include "data/ImGuiToolComponent.hpp"
 #include "data/WindowComponent.hpp"
 #include "data/GLFWWindowComponent.hpp"
 #include "data/AdjustableComponent.hpp"
+
+// kengine functions
 #include "functions/Execute.hpp"
 
-#include "helpers/MainLoop.hpp"
-#include "helpers/SortHelper.hpp"
+// kengine helpers
+#include "helpers/mainLoop.hpp"
+#include "helpers/sortHelper.hpp"
 
-static kengine::EntityManager * g_em;
+// systems
+#include "ImGuiPluginSystem.hpp"
+#include "ImGuiLuaSystem.hpp"
+
+// src
+#include "types/registerTypes.hpp"
+
 static GLFWwindow * g_window;
 static HHOOK g_hook;
 static WNDPROC g_prevWndProc;
 
-// declarations
-struct Options {
-	std::optional<float> scale;
-};
-static Options parseOptions(int ac, const char ** av);
-static void addSystems();
-static void setScale(float scale);
-static void setupWindow();
-static void loadPlugins();
-//
-int main(int ac, const char **av) {
-	ShowWindow(GetConsoleWindow(), SW_HIDE);
-
-	putils::goToBinDir(av[0]);
-
-	kengine::EntityManager em;
-	g_em = &em;
-
-	em += [](kengine::Entity & e) {
-		e += kengine::WindowComponent{
-			"Koverlay",
-			{ 1, 1 }
-		};
+struct impl {
+	struct Options {
+		std::optional<float> scale;
 	};
 
-	addSystems();
-	const auto options = parseOptions(ac, av);
-	if (options.scale)
-		setScale(*options.scale);
-	setupWindow();
-	loadPlugins();
+	static void run(int ac, const char ** av) noexcept {
+		kengine::init();
+		types::registerTypes();
 
-	extern void registerTypes(kengine::EntityManager &);
-	registerTypes(em);
+		kengine::entities += [](kengine::Entity & e) {
+			e += kengine::WindowComponent{
+				.name = "Koverlay",
+				.size = { 1, 1 }
+			};
+		};
 
-	kengine::MainLoop::run(em);
+		addSystems();
+		const auto options = parseOptions(ac, av);
+		if (options.scale)
+			setScale(*options.scale);
+		setupWindow();
+		loadPlugins();
 
-	UnhookWindowsHookEx(g_hook);
-
-	return 0;
-}
-
-static Options parseOptions(int ac, const char ** av) {
-	Options ret;
-
-	for (int i = 1; i < ac; ++i)
-		if (strcmp(av[i], "--scale") == 0) {
-			++i;
-			if (i >= ac)
-				return ret;
-			ret.scale = (float)atof(av[i]);
-		}
-
-	return ret;
-}
-
-static void addSystems() {
-	*g_em += kengine::OpenGLSystem(*g_em);
-	*g_em += kengine::LuaSystem(*g_em);
-	*g_em += kengine::PySystem(*g_em);
-	*g_em += kengine::ImGuiAdjustableSystem(*g_em);
-	*g_em += kengine::ImGuiToolSystem(*g_em);
-	*g_em += ImGuiPluginSystem(*g_em);
-	*g_em += ImGuiLuaSystem(*g_em);
-	*g_em += ImGuiPromptSystem(*g_em);
-}
-
-static void setScale(float scale) {
-	for (const auto & [e, adjustable] : g_em->getEntities<kengine::AdjustableComponent>()) {
-		if (adjustable.section != "ImGui")
-			continue;
-		for (auto & val : adjustable.values)
-			if (val.name == "Scale") {
-				auto & storage = std::get<kengine::AdjustableComponent::Value::FloatStorage>(val.storage);
-				*(storage.ptr) = scale;
-				storage.value = scale;
-			}
-	}
-}
-
-static void loadPlugins() {
-	putils::PluginManager pm;
-	pm.rescanDirectory("plugins", "loadKenginePlugin", *g_em);
-}
-
-// declarations
-#define MY_SYSTEM_TRAY_MESSAGE (WM_APP + 1) // arbitrary value between WP_APP and 0xBFFF
-static LRESULT wndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam);
-static LRESULT __stdcall hookCallback(int nCode, WPARAM wParam, LPARAM lParam);
-//
-static void setupWindow() {
-	for (const auto & [e, execute] : g_em->getEntities<kengine::functions::Execute>())
-		execute(0.f); // Makes OpenGLSystem create window
-	for (const auto & [e, window] : g_em->getEntities<kengine::GLFWWindowComponent>()) {
-		g_window = window.window;
-		glfwHideWindow(g_window);
+		kengine::mainLoop::run();
 	}
 
-	NOTIFYICONDATA nid;
-	nid.cbSize = sizeof(nid);
-	nid.uID = (UINT)std::hash<const char *>()("koala overlay");
-	nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-	nid.hIcon = (HICON)LoadImage(nullptr, "resources/koala.ico", IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE);
-	nid.hWnd = glfwGetWin32Window(g_window);
-	nid.uCallbackMessage = MY_SYSTEM_TRAY_MESSAGE;
-	strcpy_s(nid.szTip, "Koverlay");
+	static Options parseOptions(int ac, const char ** av) noexcept {
+		Options ret;
 
-	Shell_NotifyIconA(NIM_ADD, &nid);
-
-#ifdef GWL_WNDPROC
-	g_prevWndProc = (WNDPROC)SetWindowLongPtr(nid.hWnd, GWL_WNDPROC, (LONG_PTR)&wndProc);
-#else
-	g_prevWndProc = (WNDPROC)SetWindowLongPtr(nid.hWnd, GWLP_WNDPROC, (LONG_PTR)&wndProc);
-#endif
-
-	g_hook = SetWindowsHookEx(WH_KEYBOARD_LL, hookCallback, nullptr, 0);
-}
-
-static bool g_enabled = true;
-struct ToolSave {
-	bool enabled = false;
-};
-
-// declarations
-static void showContextMenu(bool shown);
-static void toggleAllTools();
-//
-static LRESULT wndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam) {
-	if (umsg == MY_SYSTEM_TRAY_MESSAGE) {
-		switch (lParam) {
-		case WM_RBUTTONUP:
-			showContextMenu(true);
-			break;
-		case WM_LBUTTONDBLCLK:
-			toggleAllTools();
-			break;
-		default:
-			break;
-		}
-	}
-	else if (umsg == WM_COMMAND) { // In context menu
-		const auto id = LOWORD(wParam);
-		size_t i = 0;
-		bool found = false;
-		auto sorted = kengine::SortHelper::getNameSortedEntities<0, kengine::ImGuiToolComponent>(*g_em);
-		for (auto & [e, name, tool] : sorted) {
-			if (id != i) {
+		for (int i = 1; i < ac; ++i)
+			if (strcmp(av[i], "--scale") == 0) {
 				++i;
+				if (i >= ac)
+					return ret;
+				ret.scale = (float)atof(av[i]);
+			}
+
+		return ret;
+	}
+
+	static void addSystems() noexcept {
+		kengine::entities += kengine::OpenGLSystem();
+		kengine::entities += kengine::GLFWSystem();
+		kengine::entities += kengine::LuaSystem();
+		kengine::entities += kengine::PythonSystem();
+		kengine::entities += kengine::ImGuiAdjustableSystem();
+		kengine::entities += kengine::ImGuiPromptSystem();
+		kengine::entities += kengine::ImGuiToolSystem();
+		kengine::entities += ImGuiPluginSystem();
+		kengine::entities += ImGuiLuaSystem();
+	}
+
+	static void setScale(float scale) noexcept {
+		for (const auto [e, adjustable] : kengine::entities.with<kengine::AdjustableComponent>()) {
+			if (adjustable.section != "ImGui")
 				continue;
-			}
+			for (auto & val : adjustable.values)
+				if (val.name == "Scale") {
+					auto & storage = std::get<kengine::AdjustableComponent::Value::FloatStorage>(val.storage);
+					*(storage.ptr) = scale;
+					storage.value = scale;
+				}
+		}
+	}
 
-			if (g_enabled)
-				tool->enabled = !tool->enabled;
-			else {
-				auto & save = e.attach<ToolSave>();
-				save.enabled = !save.enabled;
-			}
+	static void loadPlugins() noexcept {
+		putils::PluginManager pm;
+		pm.rescanDirectory("plugins", "loadKenginePlugin", kengine::getState());
+	}
 
-			found = true;
-			break;
+#define MY_SYSTEM_TRAY_MESSAGE (WM_APP + 1) // arbitrary value between WP_APP and 0xBFFF
+
+	static void setupWindow() noexcept {
+		for (const auto [e, execute] : kengine::entities.with<kengine::functions::Execute>())
+			execute(0.f); // Makes OpenGLSystem create window
+		for (const auto [e, window] : kengine::entities.with<kengine::GLFWWindowComponent>()) {
+			g_window = window.window.get();
+			glfwHideWindow(g_window);
 		}
 
-		if (!found) { // "Exit"
-			g_em->running = false;
-			if (!g_enabled)
+		NOTIFYICONDATA nid;
+		nid.cbSize = sizeof(nid);
+		nid.uID = (UINT)std::hash<const char *>()("koala overlay");
+		nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+		nid.hIcon = (HICON)LoadImage(nullptr, "resources/koala.ico", IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE);
+		nid.hWnd = glfwGetWin32Window(g_window);
+		nid.uCallbackMessage = MY_SYSTEM_TRAY_MESSAGE;
+		strcpy_s(nid.szTip, "Koverlay");
+
+		Shell_NotifyIconA(NIM_ADD, &nid);
+
+	#ifdef GWL_WNDPROC
+		g_prevWndProc = (WNDPROC)SetWindowLongPtr(nid.hWnd, GWL_WNDPROC, (LONG_PTR)&wndProc);
+	#else
+		g_prevWndProc = (WNDPROC)SetWindowLongPtr(nid.hWnd, GWLP_WNDPROC, (LONG_PTR)&wndProc);
+	#endif
+
+		g_hook = SetWindowsHookEx(WH_KEYBOARD_LL, hookCallback, nullptr, 0);
+	}
+
+	static inline bool g_enabled = true;
+
+	struct ToolSave {
+		bool enabled = false;
+	};
+
+	static LRESULT wndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam) {
+		if (umsg == MY_SYSTEM_TRAY_MESSAGE) {
+			switch (lParam) {
+			case WM_RBUTTONUP:
+				showContextMenu(true);
+				break;
+			case WM_LBUTTONDBLCLK:
 				toggleAllTools();
+				break;
+			default:
+				break;
+			}
 		}
-	}
-	else
-		showContextMenu(false);
+		else if (umsg == WM_COMMAND) { // In context menu
+			const auto id = LOWORD(wParam);
+			size_t i = 0;
+			bool found = false;
+			auto sorted = kengine::sortHelper::getNameSortedEntities<0, kengine::ImGuiToolComponent>();
+			for (auto & [e, name, tool] : sorted) {
+				if (id != i) {
+					++i;
+					continue;
+				}
 
-	return CallWindowProc(g_prevWndProc, hwnd, umsg, wParam, lParam);
-}
+				if (g_enabled)
+					tool->enabled = !tool->enabled;
+				else {
+					auto & save = e.attach<ToolSave>();
+					save.enabled = !save.enabled;
+				}
 
-static void showContextMenu(bool shown) {
-	static HMENU hMenu;
+				found = true;
+				break;
+			}
 
-	DestroyMenu(hMenu);
-	if (!shown)
-		return;
-	glfwFocusWindow(g_window);
-	hMenu = CreatePopupMenu();
-
-	size_t i = 0;
-	const auto sorted = kengine::SortHelper::getNameSortedEntities<0, kengine::ImGuiToolComponent>(*g_em);
-	for (const auto & [e, name, tool] : sorted) {
-		AppendMenu(hMenu, MF_STRING, i, name->name);
-		++i;
-	}
-	AppendMenu(hMenu, MF_STRING, i, "Exit");
-
-	POINT curPoint;
-	GetCursorPos(&curPoint);
-
-	const auto hWnd = glfwGetWin32Window(g_window);
-	TrackPopupMenu(hMenu, 0, curPoint.x, curPoint.y, 0, hWnd, nullptr);
-}
-
-static LRESULT __stdcall hookCallback(int nCode, WPARAM wParam, LPARAM lParam) {
-	static bool altPressed = false;
-	static bool disablePressed = false;
-
-	const auto ret = [&] { return CallNextHookEx(g_hook, nCode, wParam, lParam); };
-
-	if (nCode != HC_ACTION)
-		return ret();
-
-	const auto kbd = (KBDLLHOOKSTRUCT *)lParam;
-	const bool keyDown = wParam == WM_SYSKEYDOWN;
-
-	switch (kbd->vkCode) {
-	case VK_LMENU:
-		altPressed = keyDown;
-		break;
-	case 'Q':
-		disablePressed = keyDown;
-		break;
-	}
-
-	if (altPressed && disablePressed)
-		toggleAllTools();
-
-	return ret();
-}
-
-static void toggleAllTools() {
-	glfwFocusWindow(g_window);
-
-	for (auto & [e, name, tool] : g_em->getEntities<kengine::NameComponent, kengine::ImGuiToolComponent>())
-		if (g_enabled) {
-			e += ToolSave{ tool.enabled };
-			tool.enabled = false;
+			if (!found) { // "Exit"
+				kengine::stopRunning();
+				if (!g_enabled)
+					toggleAllTools();
+			}
 		}
 		else
-			tool.enabled = e.attach<ToolSave>().enabled;
+			showContextMenu(false);
 
-	static bool first = true; // Don't know why, first time this is called it leaves one of the tools open
-	if (first && g_enabled) {
-		first = false;
-		for (auto & [e, name, tool] : g_em->getEntities<kengine::NameComponent, kengine::ImGuiToolComponent>())
-			if (tool.enabled) {
+		return CallWindowProc(g_prevWndProc, hwnd, umsg, wParam, lParam);
+	}
+
+	static void showContextMenu(bool shown) noexcept {
+		static HMENU hMenu;
+
+		DestroyMenu(hMenu);
+		if (!shown)
+			return;
+		glfwFocusWindow(g_window);
+		hMenu = CreatePopupMenu();
+
+		size_t i = 0;
+		const auto sorted = kengine::sortHelper::getNameSortedEntities<0, kengine::ImGuiToolComponent>();
+		for (const auto & [e, name, tool] : sorted) {
+			AppendMenu(hMenu, MF_STRING, i, name->name);
+			++i;
+		}
+		AppendMenu(hMenu, MF_STRING, i, "Exit");
+
+		POINT curPoint;
+		GetCursorPos(&curPoint);
+
+		const auto hWnd = glfwGetWin32Window(g_window);
+		TrackPopupMenu(hMenu, 0, curPoint.x, curPoint.y, 0, hWnd, nullptr);
+	}
+
+	static LRESULT __stdcall hookCallback(int nCode, WPARAM wParam, LPARAM lParam) {
+		static bool altPressed = false;
+		static bool disablePressed = false;
+
+		const auto ret = [&] { return CallNextHookEx(g_hook, nCode, wParam, lParam); };
+
+		if (nCode != HC_ACTION)
+			return ret();
+
+		const auto kbd = (KBDLLHOOKSTRUCT *)lParam;
+		const bool keyDown = wParam == WM_SYSKEYDOWN;
+
+		switch (kbd->vkCode) {
+		case VK_LMENU:
+			altPressed = keyDown;
+			break;
+		case 'Q':
+			disablePressed = keyDown;
+			break;
+		}
+
+		if (altPressed && disablePressed)
+			toggleAllTools();
+
+		return ret();
+	}
+
+	static void toggleAllTools() noexcept {
+		glfwFocusWindow(g_window);
+
+		for (auto [e, name, tool] : kengine::entities.with<kengine::NameComponent, kengine::ImGuiToolComponent>())
+			if (g_enabled) {
 				e += ToolSave{ tool.enabled };
 				tool.enabled = false;
 			}
-	}
+			else
+				tool.enabled = e.attach<ToolSave>().enabled;
 
-	g_enabled = !g_enabled;
+		static bool first = true; // Don't know why, first time this is called it leaves one of the tools open
+		if (first && g_enabled) {
+			first = false;
+			for (auto [e, name, tool] : kengine::entities.with<kengine::NameComponent, kengine::ImGuiToolComponent>())
+				if (tool.enabled) {
+					e += ToolSave{ tool.enabled };
+					tool.enabled = false;
+				}
+		}
+
+		g_enabled = !g_enabled;
+	}
+};
+
+int main(int ac, const char **av) {
+	ShowWindow(GetConsoleWindow(), SW_HIDE);
+	putils::goToBinDir(av[0]);
+	impl::run(ac, av);
+	UnhookWindowsHookEx(g_hook);
+	return 0;
 }

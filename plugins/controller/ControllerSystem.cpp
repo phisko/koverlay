@@ -1,33 +1,33 @@
-#include "EntityManager.hpp"
+#include "kengine.hpp"
 #include "Export.hpp"
 
-#include "helpers/PluginHelper.hpp"
-#include "helpers/SortHelper.hpp"
+#include "helpers/pluginHelper.hpp"
+#include "helpers/sortHelper.hpp"
 
 #include "data/NameComponent.hpp"
 #include "data/ImGuiToolComponent.hpp"
-#include "data/ImGuiComponent.hpp"
+#include "functions/Execute.hpp"
 #include "imgui.h"
 
-EXPORT void loadKenginePlugin(kengine::EntityManager & em) {
-	kengine::PluginHelper::initPlugin(em);
+EXPORT void loadKenginePlugin(void * state) noexcept {
+	kengine::pluginHelper::initPlugin(state);
 
-	em += [&](kengine::Entity & e) {
+	kengine::entities += [&](kengine::Entity & e) noexcept {
 		e += kengine::NameComponent{ "Controller" };
 
 		auto & tool = e.attach<kengine::ImGuiToolComponent>();
 		tool.enabled = true;
 
-		e += kengine::ImGuiComponent([&] {
+		e += kengine::functions::Execute{ [&](float deltaTime) noexcept {
 			if (!tool.enabled)
 				return;
 
 			if (ImGui::Begin("Koverlay", &tool.enabled)) {
-				const auto sorted = kengine::SortHelper::getNameSortedEntities<0, kengine::ImGuiToolComponent>(em);
+				const auto sorted = kengine::sortHelper::getNameSortedEntities<0, kengine::ImGuiToolComponent>();
 				for (const auto & [e, name, tool] : sorted)
 					ImGui::Checkbox(name->name, &tool->enabled);
 			}
 			ImGui::End();
-		});
+		} };
 	};
 }
