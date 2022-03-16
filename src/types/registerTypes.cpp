@@ -8,6 +8,9 @@ namespace types{
 		extern void registerkengineWindowComponent() noexcept;
 		registerkengineWindowComponent();
 
+		extern void registerkengineCommandLineComponent() noexcept;
+		registerkengineCommandLineComponent();
+
 		extern void registerkenginefunctionsExecute() noexcept;
 		registerkenginefunctionsExecute();
 

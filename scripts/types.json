@@ -9,6 +9,10 @@
 			"header": "data/WindowComponent.hpp"
 		},
 		{
+			"type": "kengine::CommandLineComponent",
+			"header": "data/CommandLineComponent.hpp"
+		},
+		{
 			"type": "kengine::functions::Execute",
 			"header": "functions/Execute.hpp"
 		},

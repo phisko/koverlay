@@ -70,7 +70,11 @@ struct impl {
 		types::registerTypes();
 
 		kengine::entities += [&](kengine::Entity & e) {
-			e += kengine::CommandLineComponent{ ac, av };
+            kengine::CommandLineComponent commandLine;
+            for (int i = 0; i < ac; ++i)
+                commandLine.arguments.push_back(av[i]);
+			e += std::move(commandLine);
+
 			e += kengine::WindowComponent{
 				.name = "Koverlay",
 				.size = { 1, 1 }
