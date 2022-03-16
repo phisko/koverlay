@@ -69,7 +69,8 @@ struct impl {
 		kengine::init();
 		types::registerTypes();
 
-		kengine::entities += [](kengine::Entity & e) {
+		kengine::entities += [&](kengine::Entity & e) {
+			e += kengine::CommandLineComponent{ ac, av };
 			e += kengine::WindowComponent{
 				.name = "Koverlay",
 				.size = { 1, 1 }
