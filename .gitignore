@@ -1,3 +1,5 @@
+.idea/
+cmake-build-*/
 .vs/
 build/
 bin/
