@@ -25,11 +25,12 @@ static_assert(false, "Only implemented on Windows for now");
 #include "systems/python/PythonSystem.hpp"
 
 // kengine data
-#include "data/NameComponent.hpp"
-#include "data/ImGuiToolComponent.hpp"
-#include "data/WindowComponent.hpp"
-#include "data/GLFWWindowComponent.hpp"
 #include "data/AdjustableComponent.hpp"
+#include "data/CommandLineComponent.hpp"
+#include "data/GLFWWindowComponent.hpp"
+#include "data/ImGuiToolComponent.hpp"
+#include "data/NameComponent.hpp"
+#include "data/WindowComponent.hpp"
 
 // kengine functions
 #include "functions/Execute.hpp"
