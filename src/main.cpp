@@ -46,15 +46,25 @@ static_assert(false, "Only implemented on Windows for now");
 // src
 #include "types/registerTypes.hpp"
 
+#include "command_line_arguments.hpp"
+
 static GLFWwindow * g_window;
 static HHOOK g_hook;
 static WNDPROC g_prevWndProc;
 
-struct impl {
-	struct Options {
-		std::optional<float> scale;
-	};
+// Command-line arguments
+struct Options {
+	std::optional<float> scale;
+};
+#define refltype Options
+putils_reflection_info{
+	putils_reflection_attributes(
+		putils_reflection_attribute(scale)
+	);
+};
+#undef refltype
 
+struct impl {
 	static void run(int ac, const char ** av) noexcept {
 		kengine::init();
 		types::registerTypes();
@@ -67,27 +77,13 @@ struct impl {
 		};
 
 		addSystems();
-		const auto options = parseOptions(ac, av);
+		const auto options = putils::parseArguments<Options>(ac, av);
 		if (options.scale)
 			setScale(*options.scale);
 		setupWindow();
 		loadPlugins();
 
 		kengine::mainLoop::run();
-	}
-
-	static Options parseOptions(int ac, const char ** av) noexcept {
-		Options ret;
-
-		for (int i = 1; i < ac; ++i)
-			if (strcmp(av[i], "--scale") == 0) {
-				++i;
-				if (i >= ac)
-					return ret;
-				ret.scale = (float)atof(av[i]);
-			}
-
-		return ret;
 	}
 
 	static void addSystems() noexcept {
