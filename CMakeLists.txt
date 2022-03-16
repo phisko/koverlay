@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(koverlay) 
 
 set(CMAKE_CXX_STANDARD 20)
-if(WIN32)
+if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj /std:c++20 /DNOMINMAX /MP8")
 endif()
 
@@ -33,6 +33,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL ${bindir}/minsizerel/plugins)
 
 ## Kengine
 
+set(KENGINE_BUILD_TESTS TRUE)
 set(KENGINE_NO_TYPE_REGISTRATION TRUE)
 set(KENGINE_GLFW TRUE)
 set(KENGINE_IMGUI_ADJUSTABLE TRUE)
