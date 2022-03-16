@@ -104,8 +104,8 @@ struct impl {
 				continue;
 			for (auto & val : adjustable.values)
 				if (val.name == "Scale") {
-					auto & storage = std::get<kengine::AdjustableComponent::Value::FloatStorage>(val.storage);
-					*(storage.ptr) = scale;
+					auto & storage = val.floatStorage;
+					*storage.ptr = scale;
 					storage.value = scale;
 				}
 		}
