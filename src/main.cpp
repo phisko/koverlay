@@ -62,32 +62,32 @@ struct Options {
 putils_reflection_info{
 	putils_reflection_attributes(
 		putils_reflection_attribute(scale),
-        putils_reflection_attribute(showWindow)
+        putils_reflection_attribute(showWindow,
+            putils_reflection_metadata("help", "Show the debug window")
+        )
 	);
 };
 #undef refltype
 
 namespace {
     struct impl {
-        static void run(int ac, const char **av) noexcept {
+        static void run(int ac, const char ** av) noexcept {
             kengine::init();
             types::registerTypes();
 
-            kengine::entities += [&](kengine::Entity &e) {
-                kengine::CommandLineComponent commandLine;
-                for (int i = 0; i < ac; ++i)
-                    commandLine.arguments.push_back(av[i]);
-                e += std::move(commandLine);
+            const auto args = putils::toArgumentVector(ac, av);
+            const auto options = putils::parseArguments<Options>(args, "Koala Overlay: a framework for ImGui tools");
 
+            kengine::entities += [&](kengine::Entity &e) {
+                e += kengine::CommandLineComponent{ args };
                 e += kengine::WindowComponent{
-                        .name = "Koverlay",
-                        .size = {1, 1}
+                    .name = "Koverlay",
+                    .size = {1, 1}
                 };
             };
 
             addSystems();
 
-            const auto options = putils::parseArguments<Options>(ac, av);
             if (!options.showWindow)
                 ShowWindow(GetConsoleWindow(), SW_HIDE);
             if (options.scale)

@@ -2,6 +2,7 @@
 #include "kengine.hpp"
 
 // kengine data
+#include "data/CommandLineComponent.hpp"
 #include "data/ImGuiScaleComponent.hpp"
 #include "data/ImGuiToolComponent.hpp"
 #include "data/LuaStateComponent.hpp"
@@ -11,11 +12,29 @@
 #include "functions/Execute.hpp"
 
 // putils
+#include "command_line_arguments.hpp"
 #include "Directory.hpp"
 
 namespace {
+    struct Options {
+        bool printLuaFunctions = false;
+    };
+}
+
+#define refltype Options
+putils_reflection_info{
+    putils_reflection_custom_class_name(ImGui Lua);
+    putils_reflection_attributes(
+        putils_reflection_attribute(printLuaFunctions,
+            putils_reflection_metadata("help", "Print a list of all ImGui functions exposed to Lua")
+        )
+    );
+};
+#undef refltype
+
+namespace {
     struct impl {
-        static inline sol::state *g_state = nullptr;
+        static inline sol::state * g_state = nullptr;
 
         static void init(kengine::Entity &system) noexcept {
             initBindings();
@@ -28,11 +47,16 @@ namespace {
             extern lua_State *lState;
             extern void LoadImguiBindings();
 
+            Options options;
+            for (const auto & [e, args] : kengine::entities.with<kengine::CommandLineComponent>())
+                options = putils::parseArguments<Options>(args.arguments);
+
             for (const auto &[e, state]: kengine::entities.with<kengine::LuaStateComponent>()) {
                 lState = *state.state;
                 LoadImguiBindings();
                 g_state = state.state;
-                g_state->script(
+                if (options.printLuaFunctions)
+                    g_state->script(
                         R"(
 print("ImGui Lua bindings:")
 for k, v in pairs(imgui) do
