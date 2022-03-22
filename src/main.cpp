@@ -21,6 +21,9 @@ static_assert(false, "Only implemented on Windows for now");
 #include "systems/imgui_tool/ImGuiToolSystem.hpp"
 #include "systems/imgui_prompt/ImGuiPromptSystem.hpp"
 #include "systems/imgui_adjustable/ImGuiAdjustableSystem.hpp"
+#include "systems/log_imgui/LogImGuiSystem.hpp"
+#include "systems/log_stdout/LogStdoutSystem.hpp"
+#include "systems/log_visual_studio/LogVisualStudioSystem.hpp"
 #include "systems/lua/LuaSystem.hpp"
 #include "systems/opengl/OpenGLSystem.hpp"
 #include "systems/python/PythonSystem.hpp"
@@ -100,13 +103,25 @@ namespace {
         }
 
         static void addSystems() noexcept {
+            // log
+            kengine::entities += kengine::LogImGuiSystem();
+            kengine::entities += kengine::LogStdoutSystem();
+            kengine::entities += kengine::LogVisualStudioSystem();
+
+            // rendering
             kengine::entities += kengine::OpenGLSystem();
             kengine::entities += kengine::GLFWSystem();
+
+            // scripting
             kengine::entities += kengine::LuaSystem();
             kengine::entities += kengine::PythonSystem();
+
+            // ImGui
             kengine::entities += kengine::ImGuiAdjustableSystem();
             kengine::entities += kengine::ImGuiPromptSystem();
             kengine::entities += kengine::ImGuiToolSystem();
+
+            // project
             kengine::entities += ImGuiPluginSystem();
             kengine::entities += ImGuiLuaSystem();
         }
