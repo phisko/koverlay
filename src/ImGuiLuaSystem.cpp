@@ -32,6 +32,9 @@ putils_reflection_info{
 };
 #undef refltype
 
+extern void LoadImguiBindings();
+extern lua_State * lState;
+
 namespace {
     struct impl {
         static inline sol::state * g_state = nullptr;
@@ -44,9 +47,6 @@ namespace {
         }
 
         static void initBindings() noexcept {
-            extern lua_State *lState;
-            extern void LoadImguiBindings();
-
             Options options;
             for (const auto & [e, args] : kengine::entities.with<kengine::CommandLineComponent>())
                 options = putils::parseArguments<Options>(args.arguments);
