@@ -72,7 +72,7 @@ file(GLOB exeFiles
     src/*.cpp src/*.hpp
     src/types/*.cpp src/types/*.hpp)
 
-add_executable(${exe_name} ${exeFiles} ${commonFiles})
+add_executable(${exe_name} ${exeFiles} ${commonFiles} appicon.rc)
 target_include_directories(${exe_name} PRIVATE src)
 target_link_libraries(${exe_name} kengine api)
 
