@@ -1,15 +1,13 @@
-#ifndef WIN32
-static_assert(false, "Only implemented on Windows for now");
-#endif
-
 #include <optional>
 
 #include <GLFW/glfw3.h>
 
-#include <windowsx.h>
-#define GLFW_EXPOSE_NATIVE_WIN32
-# include <GLFW/glfw3native.h>
-#undef GLFW_EXPOSE_NATIVE_WIN32
+#ifdef _WIN32
+# include <windowsx.h>
+# define GLFW_EXPOSE_NATIVE_WIN32
+#  include <GLFW/glfw3native.h>
+# undef GLFW_EXPOSE_NATIVE_WIN32
+#endif
 
 // putils
 #include "go_to_bin_dir.hpp"
@@ -53,8 +51,11 @@ static_assert(false, "Only implemented on Windows for now");
 #include "command_line_arguments.hpp"
 
 static GLFWwindow * g_window;
+
+#ifdef _WIN32
 static HHOOK g_hook;
 static WNDPROC g_prevWndProc;
+#endif
 
 // Command-line arguments
 struct Options {
@@ -91,8 +92,10 @@ namespace {
 
             addSystems();
 
+#ifdef _WIN32
             if (!options.showWindow)
                 ShowWindow(GetConsoleWindow(), SW_HIDE);
+#endif
             if (options.scale)
                 setScale(*options.scale);
 
@@ -144,7 +147,9 @@ namespace {
             pm.rescanDirectory("plugins", "loadKenginePlugin", kengine::getState());
         }
 
-#define MY_SYSTEM_TRAY_MESSAGE (WM_APP + 1) // arbitrary value between WP_APP and 0xBFFF
+#ifdef _WIN32
+# define MY_SYSTEM_TRAY_MESSAGE (WM_APP + 1) // arbitrary value between WP_APP and 0xBFFF
+#endif
 
         static putils::OnScopeExit<std::function<void()>> setupWindow() noexcept {
             for (const auto[e, execute]: kengine::entities.with<kengine::functions::Execute>())
@@ -154,6 +159,7 @@ namespace {
                 glfwHideWindow(g_window);
             }
 
+#ifdef _WIN32
             NOTIFYICONDATA nid;
             nid.cbSize = sizeof(nid);
             nid.uID = (UINT) std::hash<const char *>()("koala overlay");
@@ -177,6 +183,9 @@ namespace {
                 UnhookWindowsHookEx(g_hook);
             };
             return putils::onScopeExit(release);
+#else
+            return putils::onScopeExit(std::function<void()>([]{}));
+#endif // _WIN32
         }
 
         static inline bool g_enabled = true;
@@ -185,6 +194,7 @@ namespace {
             bool enabled = false;
         };
 
+#ifdef _WIN32
         static LRESULT wndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam) {
             if (umsg == MY_SYSTEM_TRAY_MESSAGE) {
                 switch (lParam) {
@@ -280,6 +290,7 @@ namespace {
 
             return ret();
         }
+#endif // _WIN32
 
         static void toggleAllTools() noexcept {
             glfwFocusWindow(g_window);

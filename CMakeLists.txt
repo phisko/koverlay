@@ -4,6 +4,8 @@ project(koverlay)
 set(CMAKE_CXX_STANDARD 20)
 if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj /std:c++20 /DNOMINMAX /MP8")
+elseif(UNIX)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 endif()
 
 set(libdir "${PROJECT_SOURCE_DIR}/lib")
