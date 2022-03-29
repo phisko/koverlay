@@ -184,6 +184,8 @@ namespace {
             };
             return putils::onScopeExit(release);
 #else
+            for (auto [e, tool] : kengine::entities.with<kengine::ImGuiToolComponent>())
+                tool.enabled = true;
             return putils::onScopeExit(std::function<void()>([]{}));
 #endif // _WIN32
         }
