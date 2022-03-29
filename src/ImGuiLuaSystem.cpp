@@ -11,8 +11,10 @@
 // kengine functions
 #include "functions/Execute.hpp"
 
+// kengine helpers
+#include "helpers/commandLineHelper.hpp"
+
 // putils
-#include "command_line_arguments.hpp"
 #include "Directory.hpp"
 
 namespace {
@@ -47,9 +49,7 @@ namespace {
         }
 
         static void initBindings() noexcept {
-            Options options;
-            for (const auto & [e, args] : kengine::entities.with<kengine::CommandLineComponent>())
-                options = putils::parseArguments<Options>(args.arguments);
+            const auto options = kengine::parseCommandLine<Options>();
 
             for (const auto &[e, state]: kengine::entities.with<kengine::LuaStateComponent>()) {
                 lState = *state.state;
