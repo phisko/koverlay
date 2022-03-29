@@ -101,8 +101,11 @@ namespace {
             if (options.scale)
                 setScale(*options.scale);
 
-            const auto _ = setupWindow();
+            createAndHideWindow();
             loadPlugins();
+
+            setupSystemTray();
+            const auto _ = setupKeyboardHook();
 
             kengine::mainLoop::run();
         }
@@ -154,14 +157,16 @@ namespace {
 # define MY_SYSTEM_TRAY_MESSAGE (WM_APP + 1) // arbitrary value between WP_APP and 0xBFFF
 #endif
 
-        static putils::OnScopeExit<std::function<void()>> setupWindow() noexcept {
+        static void createAndHideWindow() noexcept {
             for (const auto[e, execute]: kengine::entities.with<kengine::functions::Execute>())
                 execute(0.f); // Makes OpenGLSystem create window
             for (const auto[e, window]: kengine::entities.with<kengine::GLFWWindowComponent>()) {
                 g_window = window.window.get();
                 glfwHideWindow(g_window);
             }
+        }
 
+        static void setupSystemTray() noexcept {
 #ifdef _WIN32
             NOTIFYICONDATA nid;
             nid.cbSize = sizeof(nid);
@@ -180,17 +185,23 @@ namespace {
 #else
             g_prevWndProc = (WNDPROC) SetWindowLongPtr(nid.hWnd, GWLP_WNDPROC, (LONG_PTR) &wndProc);
 #endif
+#else // _WIN32
+            for (auto [e, name, tool] : kengine::entities.with<kengine::NameComponent, kengine::ImGuiToolComponent>())
+                if (name.name == "Controller")
+                    tool.enabled = true;
+#endif // _WIN32
+        }
 
+        static putils::OnScopeExit<std::function<void()>> setupKeyboardHook() noexcept {
+#ifdef _WIN32
             g_hook = SetWindowsHookEx(WH_KEYBOARD_LL, hookCallback, nullptr, 0);
             const std::function<void()> release = [] {
                 UnhookWindowsHookEx(g_hook);
             };
             return putils::onScopeExit(release);
 #else
-            for (auto [e, tool] : kengine::entities.with<kengine::ImGuiToolComponent>())
-                tool.enabled = true;
             return putils::onScopeExit(std::function<void()>([]{}));
-#endif // _WIN32
+#endif
         }
 
         static inline bool g_enabled = true;
