@@ -58,11 +58,13 @@ static HHOOK g_hook;
 static WNDPROC g_prevWndProc;
 #endif
 
-// Command-line arguments
-struct Options {
-	std::optional<float> scale;
-    bool showWindow = false;
-};
+namespace {
+    // Command-line arguments
+    struct Options {
+        std::optional<float> scale;
+        bool showWindow = false;
+    };
+}
 #define refltype Options
 putils_reflection_info{
 	putils_reflection_attributes(
