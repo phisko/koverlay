@@ -19,6 +19,7 @@
 #include "systems/imgui_tool/ImGuiToolSystem.hpp"
 #include "systems/imgui_prompt/ImGuiPromptSystem.hpp"
 #include "systems/imgui_adjustable/ImGuiAdjustableSystem.hpp"
+#include "systems/log_file/LogFileSystem.hpp"
 #include "systems/log_imgui/LogImGuiSystem.hpp"
 #include "systems/log_stdout/LogStdoutSystem.hpp"
 #include "systems/log_visual_studio/LogVisualStudioSystem.hpp"
@@ -108,6 +109,7 @@ namespace {
 
         static void addSystems() noexcept {
             // log
+            kengine::entities += kengine::LogFileSystem();
             kengine::entities += kengine::LogImGuiSystem();
             kengine::entities += kengine::LogStdoutSystem();
             kengine::entities += kengine::LogVisualStudioSystem();
