@@ -77,7 +77,6 @@ namespace {
     struct impl {
         static void run(int ac, const char ** av) noexcept {
             kengine::init();
-            types::registerTypes();
 
             const auto args = putils::toArgumentVector(ac, av);
             const auto options = putils::parseArguments<Options>(args, "Koala Overlay: a framework for ImGui tools");
@@ -91,6 +90,8 @@ namespace {
             };
 
             addSystems();
+
+            types::registerTypes();
 
 #ifdef _WIN32
             if (!options.showWindow)
