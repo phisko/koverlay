@@ -18,7 +18,7 @@ file(GLOB exeFiles
         src/*.cpp src/*.hpp
         src/types/*.cpp src/types/*.hpp)
 
-add_executable(${exe_name} ${exeFiles} ${commonFiles} appicon.rc)
+add_executable(${exe_name} ${exeFiles} appicon.rc)
 target_include_directories(${exe_name} PRIVATE src)
 
 # set plugin dir
