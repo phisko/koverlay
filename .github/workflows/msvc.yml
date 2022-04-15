@@ -1,0 +1,28 @@
+name: msvc
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '**.cpp'
+      - '**.hpp'
+      - '**.inl'
+      - '**/CMakeLists.txt'
+      - '**.cmake'
+      - 'kengine'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '**.cpp'
+      - '**.hpp'
+      - '**.inl'
+      - '**/CMakeLists.txt'
+      - '**.cmake'
+      - 'kengine'
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: phisko/cmake-cxx-conan/.github/workflows/test.yml@main
+    with:
+      os: windows-latest
