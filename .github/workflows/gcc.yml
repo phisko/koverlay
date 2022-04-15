@@ -22,7 +22,16 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  debug:
     uses: phisko/cmake-cxx-conan/.github/workflows/test.yml@main
     with:
       os: ubuntu-latest
+      configuration: Debug
+      apt_dependencies: libgl-dev libglu1-mesa-dev
+
+  release:
+    uses: phisko/cmake-cxx-conan/.github/workflows/package.yml@main
+    with:
+      os: ubuntu-latest
+      configuration: Release
+      apt_dependencies: libgl-dev libglu1-mesa-dev
