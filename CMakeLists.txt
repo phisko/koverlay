@@ -51,7 +51,6 @@ target_link_libraries(${exe_name} api)
 # Kengine
 #
 
-set(KENGINE_BUILD_TESTS TRUE)
 set(KENGINE_NO_TYPE_REGISTRATION TRUE)
 
 # rendering
