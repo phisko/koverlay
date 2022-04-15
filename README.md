@@ -1,3 +1,6 @@
+[![gcc](https://github.com/phisko/koverlay/workflows/gcc/badge.svg)](https://github.com/phisko/koverlay/actions/workflows/gcc.yml)
+[![msvc](https://github.com/phisko/koverlay/workflows/msvc/badge.svg)](https://github.com/phisko/koverlay/actions/workflows/msvc.yml)
+
 Simple and extensible overlay system using ImGui and the [Kengine](https://github.com/phisko/kengine).
 
 ImGui windows are rendered as "always-on-top" windows over other Windows applications.
