@@ -1,5 +1,4 @@
-[![gcc](https://github.com/phisko/koverlay/workflows/gcc/badge.svg)](https://github.com/phisko/koverlay/actions/workflows/gcc.yml)
-[![msvc](https://github.com/phisko/koverlay/workflows/msvc/badge.svg)](https://github.com/phisko/koverlay/actions/workflows/msvc.yml)
+[![packages](https://github.com/phisko/koverlay/workflows/packages/badge.svg)](https://github.com/phisko/koverlay/actions/workflows/packages.yml)
 
 Simple and extensible overlay system using ImGui and the [Kengine](https://github.com/phisko/kengine).
 
